@@ -1,0 +1,76 @@
+{
+  "name": "reposcribe",
+  "displayName": "reposcribe",
+  "description": "RepoScribe is a Visual Studio Code extension that automatically generates and maintains a single Markdown document containing a complete snapshot of a project's source code.",
+  "version": "0.1.0",
+  "publisher": "vipin-tom-varghese",
+  "engines": {
+    "vscode": "^1.103.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "reposcribe.openOutputFile",
+        "title": "RepoScribe: Open Output File"
+      },
+      {
+        "command": "reposcribe.forceRebuild",
+        "title": "RepoScribe: Force Rebuild"
+      },
+      {
+        "command": "reposcribe.createConfigFile",
+        "title": "RepoScribe: Create Configuration File"
+      },
+      {
+        "command": "reposcribe.toggleAutoGeneration",
+        "title": "RepoScribe: Pause/Resume Automatic Generation"
+      },
+      {
+        "command": "reposcribe.showStatusMenu",
+        "title": "RepoScribe: Show Status Menu"
+      },
+      {
+        "command": "reposcribe.copyFileContent",
+        "title": "RepoScribe: Copy Output File Content"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run esbuild-base -- --minify",
+    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "esbuild": "pnpm run esbuild-base --sourcemap",
+    "watch:esbuild": "pnpm run esbuild-base --sourcemap --watch",
+    "watch:tsc": "tsc --noEmit --watch",
+    "test-compile": "tsc -p ./",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.34.0",
+    "@types/fs-extra": "^11.0.4",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.103.0",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.25.8",
+    "eslint": "^9.32.0",
+    "generator-code": "^1.11.11",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.39.0",
+    "yo": "^5.1.0"
+  },
+  "dependencies": {
+    "debounce-fn": "^6.0.0",
+    "fast-glob": "^3.3.3",
+    "fs-extra": "^11.3.1",
+    "ignore": "^7.0.5"
+  }
+}
