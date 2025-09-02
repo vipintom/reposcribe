@@ -57,8 +57,6 @@ This configuration tells RepoScribe to:
 }
 ```
 
-```
-
 ### File Filtering Logic
 
 The final list of files is determined by this exact sequence:
@@ -102,4 +100,3 @@ This project is under active development. Bug reports, feature requests, and con
 ## License
 
 MIT
-```
