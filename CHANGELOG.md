@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-09-02
+
+### Changed
+
+- **Major UI/UX Overhaul of the Status Bar Item:**
+  - Moved the item to the **right side** of the status bar for better alignment with VS Code conventions.
+  - Replaced the custom SVG with the built-in `$(note)` Codicon for improved reliability and a cleaner look.
+  - The item is now **icon-only** to take up less space.
+  - Replaced the command palette popup with a rich, **interactive hover panel** containing all quick actions (Pause/Resume, Open File, Copy Content).
+  - The icon now uses a themed red background to clearly indicate when an error has occurred.
+- Changed the default **click action** on the status bar item to **Copy File Content** for quicker workflow integration with LLMs.
+
 ## [0.2.0] - 2025-09-02
 
 ### Changed

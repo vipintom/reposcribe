@@ -18,6 +18,7 @@ export enum UIState {
  */
 export class VSCodeUI implements vscode.Disposable {
   private statusBarItem: vscode.StatusBarItem;
+  private isPaused = false;
 
   /**
    * Creates an instance of VSCodeUI.
@@ -25,52 +26,96 @@ export class VSCodeUI implements vscode.Disposable {
    */
   constructor(commandOnClick: string) {
     this.statusBarItem = vscode.window.createStatusBarItem(
-      vscode.StatusBarAlignment.Left,
-      100
+      vscode.StatusBarAlignment.Right, // Positioned on the right
+      10 // Priority to appear before other common icons
     );
     this.statusBarItem.command = commandOnClick;
     this.statusBarItem.show();
   }
 
   /**
-   * Updates the status bar item's icon, text, and tooltip based on the extension's state.
-   * @param state The current state of the UI.
-   * @param details Optional additional information for the tooltip.
+   * Sets the paused state of the UI, which affects the tooltip content.
+   * @param isPaused Whether the auto-generation is paused.
    */
-  public updateStatus(state: UIState, details?: string): void {
+  public setPausedState(isPaused: boolean): void {
+    this.isPaused = isPaused;
+  }
+
+  /**
+   * Generates the rich hover tooltip with clickable command links.
+   * @param state The current UI state.
+   * @param details Optional details, like an update timestamp.
+   * @returns A MarkdownString to be used as the tooltip.
+   */
+  private createTooltip(
+    state: UIState,
+    details?: string
+  ): vscode.MarkdownString {
+    const md = new vscode.MarkdownString('', true);
+    md.isTrusted = true; // IMPORTANT: Allows commands to be executed from the tooltip
+
+    let statusText: string;
     switch (state) {
       case UIState.IDLE:
-        this.statusBarItem.text = `$(file-code) RepoScribe: Ready`;
-        this.statusBarItem.tooltip =
-          'RepoScribe is watching for changes. Click for options.';
+        statusText = 'Ready and watching';
         break;
-
       case UIState.GENERATING:
-        this.statusBarItem.text = `$(sync~spin) RepoScribe: Generating...`;
-        this.statusBarItem.tooltip =
-          'RepoScribe is generating the project snapshot.';
+        statusText = 'Generating the project snapshot...';
         break;
-
       case UIState.UPDATED:
-        this.statusBarItem.text = `$(check) RepoScribe: Updated`;
-        this.statusBarItem.tooltip = `Project snapshot updated. ${
-          details ? `(${details})` : ''
-        }\nClick for options.`;
+        statusText = `Updated ${details ? `at ${details}` : ''}.`;
         break;
-
       case UIState.ERROR:
-        this.statusBarItem.text = `$(error) RepoScribe: Error`;
-        this.statusBarItem.tooltip = `An error occurred. ${
-          details || 'Check the RepoScribe output channel for details.'
-        }\nClick for options.`;
+        statusText = 'An error occurred.';
         break;
-
       case UIState.PAUSED:
-        this.statusBarItem.text = `$(debug-pause) RepoScribe: Paused`;
-        this.statusBarItem.tooltip =
-          'Auto-generation is paused. Click for options.';
+        statusText = 'Automatic generation is paused.';
         break;
     }
+    md.appendMarkdown(`**RepoScribe**\n\n${statusText}\n\n---\n`);
+
+    const pauseToggle = this.isPaused
+      ? `[$(play) Resume Watcher](command:reposcribe.toggleAutoGeneration "Resume automatic file generation")`
+      : `[$(debug-pause) Pause Watcher](command:reposcribe.toggleAutoGeneration "Pause automatic file generation")`;
+
+    // Use forced line breaks (two spaces at the end of the line) for a compact layout
+    md.appendMarkdown(`${pauseToggle}  \n`);
+    md.appendMarkdown(
+      `[$(go-to-file) Open Output File](command:reposcribe.openOutputFile "Open the generated Markdown file")  \n`
+    );
+    md.appendMarkdown(
+      `[$(clippy) Copy File Content](command:reposcribe.copyFileContent "Copy the entire content of the output file to the clipboard")`
+    );
+
+    return md;
+  }
+
+  /**
+   * Updates the status bar item's icon, color, and tooltip based on the extension's state.
+   * @param state The current state of the UI.
+   * @param details Optional additional information for the tooltip (e.g., timestamp).
+   */
+  public updateStatus(state: UIState, details?: string): void {
+    // Clear background color by default
+    this.statusBarItem.backgroundColor = undefined;
+
+    switch (state) {
+      case UIState.GENERATING:
+        this.statusBarItem.text = `$(sync~spin)`;
+        break;
+      default:
+        // For IDLE, UPDATED, ERROR, PAUSED states, use the note icon.
+        this.statusBarItem.text = `$(note)`;
+        break;
+    }
+
+    if (state === UIState.ERROR) {
+      this.statusBarItem.backgroundColor = new vscode.ThemeColor(
+        'statusBarItem.errorBackground'
+      );
+    }
+
+    this.statusBarItem.tooltip = this.createTooltip(state, details);
   }
 
   /**

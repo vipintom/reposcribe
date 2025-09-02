@@ -4,12 +4,12 @@
     "moduleResolution": "bundler",
     "target": "ES2022",
     "lib": ["ES2022"],
+    "outDir": "dist" /* Safeguard: Redirects TSC output if noEmit is false */,
     "sourceMap": true,
     "rootDir": "src",
-    "strict": true /* enable all strict type-checking options */
-    /* Additional Checks */
-    // "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
-    // "noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement. */
-    // "noUnusedParameters": true,  /* Report errors on unused parameters. */
-  }
+    "strict": true,
+    "noEmit": true /* BEST PRACTICE: Prevents TSC from creating .js files; lets esbuild handle it. */
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", ".vscode-test"]
 }

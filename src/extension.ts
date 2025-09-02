@@ -41,8 +41,8 @@ export async function activate(context: vscode.ExtensionContext) {
   const initialConfig = await resolveInitialConfig(fs, logger);
 
   // 4. Instantiate UI and Coordinator
-  const showStatusMenuCommandId = 'reposcribe.showStatusMenu';
-  const ui = new VSCodeUI(showStatusMenuCommandId);
+  const copyFileContentCommandId = 'reposcribe.copyFileContent';
+  const ui = new VSCodeUI(copyFileContentCommandId);
 
   const coordinator = new GenerationCoordinator(
     logger,
@@ -65,7 +65,6 @@ export async function activate(context: vscode.ExtensionContext) {
   ui.updateStatus(UIState.IDLE);
 
   // 9. Trigger the initial generation as a non-blocking background task
-  // By removing 'await', the activate() function returns immediately.
   coordinator.generate(initialConfig);
 }
 
@@ -122,6 +121,8 @@ function registerCommands(
     }),
     vscode.commands.registerCommand('reposcribe.toggleAutoGeneration', () => {
       isAutoGenerationPaused = !isAutoGenerationPaused;
+      ui.setPausedState(isAutoGenerationPaused); // Inform the UI of the state change
+
       if (isAutoGenerationPaused) {
         ui.updateStatus(UIState.PAUSED);
         vscode.window.showInformationMessage(
@@ -135,34 +136,6 @@ function registerCommands(
         );
         logger.info('Auto-generation resumed. Triggering a build to sync...');
         coordinator.generate();
-      }
-    }),
-    vscode.commands.registerCommand('reposcribe.showStatusMenu', async () => {
-      const pauseToggleOption = isAutoGenerationPaused
-        ? '$(play) Resume Auto-Generation'
-        : '$(debug-pause) Pause Auto-Generation';
-
-      const options: { label: string; command: string }[] = [
-        {
-          label: pauseToggleOption,
-          command: 'reposcribe.toggleAutoGeneration',
-        },
-        {
-          label: '$(go-to-file) Open Output File',
-          command: 'reposcribe.openOutputFile',
-        },
-        {
-          label: '$(clippy) Copy Output File Content',
-          command: 'reposcribe.copyFileContent',
-        },
-      ];
-
-      const selection = await vscode.window.showQuickPick(options, {
-        placeHolder: 'Select a RepoScribe action',
-      });
-
-      if (selection) {
-        vscode.commands.executeCommand(selection.command);
       }
     })
   );
