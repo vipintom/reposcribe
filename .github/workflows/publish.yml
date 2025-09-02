@@ -55,4 +55,4 @@ jobs:
       - name: Publish to Open VSX Marketplace
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
-        run: pnpm ovsx publish --pat $OVSX_PAT
+        run: pnpm ovsx publish --no-dependencies --pat $OVSX_PAT
