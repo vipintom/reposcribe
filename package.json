@@ -1,14 +1,22 @@
 {
   "name": "reposcribe",
-  "displayName": "reposcribe",
-  "description": "RepoScribe is a Visual Studio Code extension that automatically generates and maintains a single Markdown document containing a complete snapshot of a project's source code.",
+  "displayName": "RepoScribe",
+  "description": "Automatically generates and maintains a single Markdown file snapshot of your project's source code, perfect for LLM context, documentation, or code reviews.",
   "version": "0.1.0",
   "publisher": "vipin-tom-varghese",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vipintom/reposcribe.git"
+  },
+  "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.103.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "AI",
+    "Snippets"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -43,16 +51,15 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "pnpm run esbuild-base -- --minify",
-    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
-    "esbuild": "pnpm run esbuild-base --sourcemap",
-    "watch:esbuild": "pnpm run esbuild-base --sourcemap --watch",
-    "watch:tsc": "tsc --noEmit --watch",
-    "test-compile": "tsc -p ./",
-    "lint": "eslint ."
+    "vscode:prepublish": "pnpm esbuild",
+    "esbuild": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify",
+    "esbuild:dev": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "watch": "pnpm esbuild:dev --watch",
+    "lint": "eslint .",
+    "package": "vsce package --no-dependencies"
   },
   "devDependencies": {
-    "@eslint/js": "^9.34.0",
+    "@eslint/js": "^9.32.0",
     "@types/fs-extra": "^11.0.4",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
