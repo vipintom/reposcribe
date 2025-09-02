@@ -180,7 +180,7 @@ async function createConfigFile(
     const defaultConfigForFile = {
       outputFile: BASE_CONFIG.outputFile,
       include: [], // User should define these explicitly
-      exclude: [], // User should define these explicitly
+      exclude: BASE_CONFIG.exclude, // Populate with default exclusions
       regenerationDelay: BASE_CONFIG.regenerationDelay,
     };
     const configContent = JSON.stringify(defaultConfigForFile, null, 2);

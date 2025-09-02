@@ -2,7 +2,7 @@
   "name": "reposcribe",
   "displayName": "RepoScribe",
   "description": "Automatically generates and maintains a single Markdown file snapshot of your project's source code, perfect for LLM context, documentation, or code reviews.",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "publisher": "vipin-tom-varghese",
   "license": "MIT",
   "repository": {
@@ -11,7 +11,7 @@
   },
   "icon": "media/icon.png",
   "engines": {
-    "vscode": "^1.103.0"
+    "vscode": "^1.89.0"
   },
   "categories": [
     "Other",
