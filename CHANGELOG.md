@@ -5,7 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.x] - 2024-07-29
+## [0.2.0] - 2025-09-02
+
+### Changed
+
+- The `RepoScribe: Create Configuration File` command now generates a `.reposcribe.json` file pre-populated with the default exclusion list for easier customization.
+
+### Fixed
+
+- **Performance:** Significantly improved extension startup time by running the initial project scan as a non-blocking background task. This prevents VS Code from lagging on large projects during activation.
+
+## [0.1.x] - 2025-09-02
 
 ### Added
 
@@ -24,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The generated `.reposcribe.json` now includes default values for easier customization.
 - The status bar item's click action now opens the new quick menu instead of directly opening the file.
 
-## [0.0.1] - 2024-07-29
+## [0.0.1] - 2025-09-02
 
 ### Added
 

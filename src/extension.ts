@@ -58,11 +58,15 @@ export async function activate(context: vscode.ExtensionContext) {
   // 6. Add all disposable services to the extension's subscriptions
   context.subscriptions.push(logger, ui);
 
-  // 7. Trigger the initial generation on activation
-  await coordinator.generate(initialConfig);
+  // 7. Set up file watchers for automatic updates
+  setupWatchers(context, coordinator, initialConfig, logger, debounceFn);
 
-  // 8. Set up file watchers for automatic updates
-  await setupWatchers(context, coordinator, initialConfig, logger, debounceFn);
+  // 8. Provide immediate feedback that the extension is ready
+  ui.updateStatus(UIState.IDLE);
+
+  // 9. Trigger the initial generation as a non-blocking background task
+  // By removing 'await', the activate() function returns immediately.
+  coordinator.generate(initialConfig);
 }
 
 function registerCommands(
@@ -234,7 +238,7 @@ async function getLatestOutputFile(fs: FileSystem): Promise<string> {
 /**
  * Creates and infigures file system watchers to trigger regeneration.
  */
-async function setupWatchers(
+function setupWatchers(
   context: vscode.ExtensionContext,
   coordinator: GenerationCoordinator,
   config: RepoScribeConfig,
