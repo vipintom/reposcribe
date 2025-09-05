@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-09-05
+
+### Fixed
+
+- **Performance:** Fixed a major performance issue where the extension would trigger regeneration for changes to ignored files (e.g., in `.gitignore`, `node_modules`, or database files). Watchers now pre-filter events, significantly reducing unnecessary CPU usage.
+- **Stability:** Fixed a critical crash caused by permission errors (`EACCES`) when scanning directories docker volumes or system-owned caches. The file scanner will now safely skip inaccessible directories.
+
+### Changed
+
+- **Configuration:** Expanded the default exclusion list to include common Python artifacts (`__pycache__`, `venv`), log files (`*.log`), and database/cache directories to improve out-of-the-box performance and prevent errors.
+- **Internal:** Performed a major internal refactoring to improve code quality and maintainability by separating watcher and command logic into dedicated application services (`WorkspaceWatcher`, `CommandRegistry`).
+
 ## [0.3.0] - 2025-09-02
 
 ### Changed

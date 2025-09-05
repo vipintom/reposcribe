@@ -36,6 +36,7 @@ export class FileScanner {
       absolute: true, // Get absolute paths
       followSymbolicLinks: false,
       onlyFiles: true,
+      suppressErrors: true, // Prevent EACCES errors from crashing the scan
     });
 
     // For filtering, we need paths relative to the workspace root.

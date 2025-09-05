@@ -6,15 +6,12 @@ RepoScribe is a Visual Studio Code extension that automatically generates and ma
 
 - **Automatic Generation**: Creates a `PROJECT_STRUCTURE.md` file in your project root the moment it's activated.
 - **Real-Time Updates**: Watches your workspace for file changes and automatically updates the snapshot.
+- **Intelligent & Performant**: Uses a smart watcher that pre-filters events, ignoring files in your `.gitignore` and `exclude` config to prevent unnecessary work and save system resources.
 - **Smart Debouncing**: Bundles rapid file changes into a single update to minimize performance impact.
 - **`.gitignore` Aware**: Natively respects your project's `.gitignore` rules.
 - **Highly Configurable**: Use an optional `.reposcribe.json` file to precisely control which files are included or excluded.
-- **Command Palette Integration**: Access core features directly from the command palette (`Ctrl+Shift+P`):
-  - `RepoScribe: Force Rebuild`
-  - `RepoScribe: Create Configuration File`
-  - `RepoScribe: Pause/Resume Automatic Generation`
-- **Status Bar Quick Menu**: A convenient popup menu for common actions, accessible by clicking the status bar item.
-- **Reliable**: Uses atomic writes to prevent file corruption, even during rapid changes.
+- **Command Palette Integration**: Access core features directly from the command palette (`Ctrl+Shift+P`).
+- **Reliable**: Uses atomic writes to prevent file corruption and safely skips inaccessible directories.
 - **Seamless Git Integration**: Automatically adds the output file to your `.gitignore`.
 - **Status Bar Feedback**: A convenient status bar icon keeps you informed of RepoScribe's status.
 
@@ -77,17 +74,15 @@ All commands are available via the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift
 - **`RepoScribe: Open Output File`**: Opens the generated Markdown file.
 - **`RepoScribe: Copy Output File Content`**: Copies the entire content of the output file to your clipboard.
 
-## Status Bar
+## Status Bar Indicator
 
-The RepoScribe status bar item gives you quick feedback and access to a menu of actions.
+The RepoScribe status bar item provides at-a-glance feedback and quick access to all actions via an interactive hover menu.
 
-- `$(file-code) RepoScribe: Ready`: Idle and watching for changes.
-- `$(sync~spin) RepoScribe: Generating...`: Actively regenerating the file.
-- `$(check) RepoScribe: Updated`: The file has been successfully updated.
-- `$(error) RepoScribe: Error`: An error occurred. Check the "RepoScribe" output channel for details.
-- `$(debug-pause) RepoScribe: Paused`: Automatic generation is currently paused.
+- `$(sync~spin)`: Actively regenerating the file.
+- `$(note)`: Idle, updated, or paused. Hover for details.
+- `$(note)` with a red background: An error occurred. Check the "RepoScribe" output channel for details.
 
-Clicking the status bar item will open a quick menu with these actions:
+Hovering over the icon reveals a menu with these actions:
 
 - **Pause/Resume Auto-Generation**
 - **Open Output File**

@@ -25,6 +25,28 @@ export const BASE_CONFIG: RepoScribeConfig = {
     '**/dist/**',
     '**/build/**',
     '**/coverage/**',
+    '**/*.log',
+
+    // Python
+    '**/__pycache__/**',
+    '**/*.pyc',
+    '**/*.pyo',
+    '**/*.pyd',
+    '**/.pytest_cache/**',
+    '**/venv/**',
+    '**/.venv/**',
+    '**/env/**',
+    '**/.env',
+    '**/instance/**',
+    '**/*.egg-info/**',
+
+    // Databases & Caches
+    '**/*cache/**',
+    '**/.cache/**',
+    '**/*.db',
+    '**/*.db-wal',
+    '**/*.db-shm',
+    '**/*.sqlitedb',
 
     // Binaries & Media
     '**/*.png',
