@@ -19,6 +19,7 @@ export class GenerationCoordinator {
   private readonly scanner: FileScanner;
   private readonly ui: VSCodeUI;
   private readonly workspaceRoot: string;
+  private updateToIdleTimer: NodeJS.Timeout | undefined;
 
   /**
    * Creates an instance of the GenerationCoordinator.
@@ -77,6 +78,11 @@ export class GenerationCoordinator {
    * @param initialConfig An optional, pre-resolved configuration to use. If not provided, it will be resolved from the workspace.
    */
   public async generate(initialConfig?: RepoScribeConfig): Promise<void> {
+    // Clear any pending timer to switch to IDLE, as a new generation has started.
+    if (this.updateToIdleTimer) {
+      clearTimeout(this.updateToIdleTimer);
+    }
+
     try {
       this.ui.updateStatus(UIState.GENERATING);
       this.logger.info('Generation process started.');
@@ -161,6 +167,11 @@ export class GenerationCoordinator {
       // 9. Update UI to success state
       this.ui.updateStatus(UIState.UPDATED, new Date().toLocaleTimeString());
       this.logger.info('Generation process completed successfully.');
+
+      // 10. Schedule transition back to IDLE state after a delay
+      this.updateToIdleTimer = setTimeout(() => {
+        this.ui.updateStatus(UIState.IDLE);
+      }, 3000); // Revert to idle after 3 seconds
     } catch (error) {
       const err = error as Error;
       const errorMessage = `A critical error occurred: ${err.message}`;

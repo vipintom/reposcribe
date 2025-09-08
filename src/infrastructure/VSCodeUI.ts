@@ -99,15 +99,28 @@ export class VSCodeUI implements vscode.Disposable {
     // Clear background color by default
     this.statusBarItem.backgroundColor = undefined;
 
+    const baseIcon = '$(note)';
+    let stateIcon = '';
+
     switch (state) {
-      case UIState.GENERATING:
-        this.statusBarItem.text = `$(sync~spin)`;
+      case UIState.IDLE:
+        stateIcon = '$(eye-watch)';
         break;
-      default:
-        // For IDLE, UPDATED, ERROR, PAUSED states, use the note icon.
-        this.statusBarItem.text = `$(note)`;
+      case UIState.GENERATING:
+        stateIcon = '$(sync~spin)';
+        break;
+      case UIState.UPDATED:
+        stateIcon = '$(check-all)';
+        break;
+      case UIState.ERROR:
+        stateIcon = '$(error)';
+        break;
+      case UIState.PAUSED:
+        stateIcon = '$(debug-pause)';
         break;
     }
+
+    this.statusBarItem.text = `${baseIcon} ${stateIcon}`;
 
     if (state === UIState.ERROR) {
       this.statusBarItem.backgroundColor = new vscode.ThemeColor(
