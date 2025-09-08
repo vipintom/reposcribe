@@ -4,8 +4,9 @@ RepoScribe is a Visual Studio Code extension that automatically generates and ma
 
 ## Features
 
-- **Automatic Generation**: Creates a `PROJECT_STRUCTURE.md` file in your project root the moment it's activated.
-- **Real-Time Updates**: Watches your workspace for file changes and automatically updates the snapshot.
+- **User-Controlled Generation**: For new projects, RepoScribe starts paused, giving you full control over when to generate the initial snapshot.
+- **Persistent State**: Remembers its "paused" or "running" state for each project across VS Code sessions.
+- **Real-Time Updates**: Once active, it watches your workspace for file changes and automatically updates the snapshot.
 - **Intelligent & Performant**: Uses a smart watcher that pre-filters events, ignoring files in your `.gitignore` and `exclude` config to prevent unnecessary work and save system resources.
 - **Smart Debouncing**: Bundles rapid file changes into a single update to minimize performance impact.
 - **`.gitignore` Aware**: Natively respects your project's `.gitignore` rules.
@@ -19,7 +20,7 @@ RepoScribe is a Visual Studio Code extension that automatically generates and ma
 
 1. **Install the Extension**: Find "RepoScribe" in the VS Code Marketplace and click Install.
 2. **Open a Project**: Open a folder or workspace in VS Code.
-3. **Done!**: RepoScribe will automatically generate `PROJECT_STRUCTURE.md` in your root directory and keep it updated as you work.
+3. **Activate RepoScribe**: For a new project, the extension will start in a **paused** state. An information message will appear. To begin, simply click the status bar icon and select **"Resume Watcher"** from the hover menu. This will generate the initial `PROJECT_STRUCTURE.md` file, and RepoScribe will then remain active to keep it updated.
 
 ## Configuration
 
@@ -69,7 +70,7 @@ The final list of files is determined by this exact sequence:
 All commands are available via the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`):
 
 - **`RepoScribe: Force Rebuild`**: Immediately regenerates the project snapshot.
-- **`RepoScribe: Pause/Resume Automatic Generation`**: Toggles the file watcher on or off.
+- **`RepoScribe: Pause/Resume Automatic Generation`**: Toggles the file watcher on or off. The state is saved per-project.
 - **`RepoScribe: Create Configuration File`**: Creates a `.reposcribe.json` file in your project root with default settings.
 - **`RepoScribe: Open Output File`**: Opens the generated Markdown file.
 - **`RepoScribe: Copy Output File Content`**: Copies the entire content of the output file to your clipboard.
