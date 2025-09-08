@@ -5,12 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2025-09-06
+
+### Fixed
+
+- **Performance:** Dramatically improved extension startup time by running the initial project scan as a non-blocking background task. This prevents VS Code from lagging or showing an activation error on large projects, ensuring the extension feels instantaneous.
+
 ## [0.3.1] - 2025-09-05
 
 ### Fixed
 
 - **Performance:** Fixed a major performance issue where the extension would trigger regeneration for changes to ignored files (e.g., in `.gitignore`, `node_modules`, or database files). Watchers now pre-filter events, significantly reducing unnecessary CPU usage.
-- **Stability:** Fixed a critical crash caused by permission errors (`EACCES`) when scanning directories docker volumes or system-owned caches. The file scanner will now safely skip inaccessible directories.
+- **Stability:** Fixed a critical crash caused by permission errors (`EACCES`) when scanning directories like `netdata` or system-owned caches. The file scanner will now safely skip inaccessible directories.
 
 ### Changed
 

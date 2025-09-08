@@ -65,22 +65,22 @@ export async function activate(context: vscode.ExtensionContext) {
   // 4. Add services to subscriptions for cleanup
   context.subscriptions.push(logger, ui, workspaceWatcher);
 
-  // 5. Set initial UI state and trigger first run
+  // 5. Set initial UI state and kick off the first run in the background
   ui.updateStatus(UIState.IDLE);
-
-  const initialConfig = await resolveInitialConfig(fs, logger);
-  coordinator.generate(initialConfig);
+  runInitialGeneration(coordinator, fs, logger);
 }
 
 /**
- * Reads the initial configuration from the workspace.
- * This is only needed for the very first run on activation.
+ * Performs the initial, potentially slow, setup and generation task.
+ * This is run as a non-blocking background process to ensure fast activation.
  */
-async function resolveInitialConfig(
+async function runInitialGeneration(
+  coordinator: GenerationCoordinator,
   fs: FileSystem,
   logger: Logger
-): Promise<RepoScribeConfig> {
-  logger.info('Performing initial configuration resolution.');
+): Promise<void> {
+  // Resolve the config needed for the first run.
+  logger.info('Performing initial configuration resolution for first run.');
   let userConfig: Partial<RepoScribeConfig> = {};
   const configUri = await fs.findFile('.reposcribe.json');
   if (configUri) {
@@ -93,7 +93,10 @@ async function resolveInitialConfig(
       );
     }
   }
-  return resolveConfig(BASE_CONFIG, userConfig);
+  const initialConfig = resolveConfig(BASE_CONFIG, userConfig);
+
+  // Trigger the generation with the resolved config. This will run in the background.
+  coordinator.generate(initialConfig);
 }
 
 /**
