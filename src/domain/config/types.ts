@@ -26,6 +26,7 @@ export const BASE_CONFIG: RepoScribeConfig = {
     '**/build/**',
     '**/coverage/**',
     '**/*.log',
+    '**/.history/**',
 
     // Python
     '**/__pycache__/**',
@@ -47,6 +48,8 @@ export const BASE_CONFIG: RepoScribeConfig = {
     '**/*.db-wal',
     '**/*.db-shm',
     '**/*.sqlitedb',
+    '**/*.tmp',
+    '**/*.db-journal',
 
     // Binaries & Media
     '**/*.png',
