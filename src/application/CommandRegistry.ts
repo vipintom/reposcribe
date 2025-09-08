@@ -8,6 +8,8 @@ import { Logger } from '../infrastructure/Logger';
 import { VSCodeUI, UIState } from '../infrastructure/VSCodeUI';
 import { BASE_CONFIG } from '../domain/config/types';
 
+const PAUSE_STATE_KEY = 'reposcribe.isPaused';
+
 /**
  * Encapsulates all command registration logic for the extension.
  */
@@ -15,8 +17,16 @@ export class CommandRegistry {
   private static isAutoGenerationPaused = false;
 
   /**
+   * Sets the initial paused state of the command registry.
+   * @param paused Whether the extension should start paused.
+   */
+  public static setInitialPauseState(paused: boolean): void {
+    this.isAutoGenerationPaused = paused;
+  }
+
+  /**
    * Registers all commands for the RepoScribe extension.
-   * @param context The extension context for managing subscriptions.
+   * @param context The extension context for managing subscriptions and state.
    * @param fs The FileSystem service.
    * @param workspaceRoot The root path of the current workspace.
    * @param coordinator The GenerationCoordinator service.
@@ -48,7 +58,16 @@ export class CommandRegistry {
         this.createConfigFile(fs, workspaceRoot, logger)
       ),
       vscode.commands.registerCommand('reposcribe.toggleAutoGeneration', () => {
+        // Toggle the state
         this.isAutoGenerationPaused = !this.isAutoGenerationPaused;
+
+        // Persist the new state for the workspace
+        context.workspaceState.update(
+          PAUSE_STATE_KEY,
+          this.isAutoGenerationPaused
+        );
+
+        // Update application components
         ui.setPausedState(this.isAutoGenerationPaused);
         watcher.setPaused(this.isAutoGenerationPaused);
 

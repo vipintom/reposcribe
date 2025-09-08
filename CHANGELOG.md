@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2025-09-07
+
+### Added
+
+- **Persistent State:** The extension now remembers its "paused" or "running" state on a per-project basis. When you close and reopen VS Code, RepoScribe will restore its previous state for that workspace.
+
+### Changed
+
+- **Default Behavior:** For new projects, RepoScribe now starts in a **paused** state by default. This prevents automatic file generation until the user explicitly opts in by resuming the watcher, providing more control over when the extension is active.
+
 ## [0.3.2] - 2025-09-06
 
 ### Fixed
