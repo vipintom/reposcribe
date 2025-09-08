@@ -20,7 +20,7 @@ export class WorkspaceWatcher implements vscode.Disposable {
   private coordinator: GenerationCoordinator;
   private fs: FileSystem;
   private logger: Logger;
-  private debounceFn: DebounceFnType;
+  private debounceFn: DebounceFnType | null = null;
   private workspaceRoot: string;
   private isPaused = false;
 
@@ -31,14 +31,20 @@ export class WorkspaceWatcher implements vscode.Disposable {
     coordinator: GenerationCoordinator,
     fs: FileSystem,
     logger: Logger,
-    debounceFn: DebounceFnType,
     workspaceRoot: string
   ) {
     this.coordinator = coordinator;
     this.fs = fs;
     this.logger = logger;
-    this.debounceFn = debounceFn;
     this.workspaceRoot = workspaceRoot;
+  }
+
+  /**
+   * Sets the debounce function, which is loaded asynchronously.
+   * @param debounceFn The debounce function implementation.
+   */
+  public setDebounceFn(debounceFn: DebounceFnType): void {
+    this.debounceFn = debounceFn;
   }
 
   /**
@@ -61,6 +67,11 @@ export class WorkspaceWatcher implements vscode.Disposable {
    * This is the core method for dynamically updating watch behavior.
    */
   private async resetWatchers(): Promise<void> {
+    if (!this.debounceFn) {
+      this.logger.error('Debounce function not set before watcher reset.');
+      return;
+    }
+
     // 1. Dispose of any existing watchers to prevent duplicates
     this.disposeWatchers();
 
