@@ -41,7 +41,6 @@ export function activate(context: vscode.ExtensionContext) {
     workspaceRoot
   );
 
-  // Note: debounceFn is dynamically imported in startup() where it's needed.
   const workspaceWatcher = new WorkspaceWatcher(
     coordinator,
     fs,
@@ -64,7 +63,6 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(logger, ui, workspaceWatcher);
 
   // 4. Schedule the asynchronous startup logic to run after activation completes.
-  // This is the key to a fast startup.
   setTimeout(
     () => startup(context, logger, ui, workspaceWatcher, coordinator, fs),
     0
@@ -83,7 +81,6 @@ async function startup(
   coordinator: GenerationCoordinator,
   fs: FileSystem
 ) {
-  // Dynamically import debounce-fn here
   const { default: debounceFn } = await import('debounce-fn');
   watcher.setDebounceFn(debounceFn);
 

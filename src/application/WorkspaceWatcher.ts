@@ -1,15 +1,16 @@
 // src/application/WorkspaceWatcher.ts
 import * as vscode from 'vscode';
 import * as path from 'path';
-import ignore, { Ignore } from 'ignore';
+import { Ignore } from 'ignore';
 import { GenerationCoordinator } from './GenerationCoordinator';
 import { FileSystem } from '../infrastructure/FileSystem';
 import { Logger } from '../infrastructure/Logger';
 import { RepoScribeConfig, BASE_CONFIG } from '../domain/config/types';
 import { resolveConfig } from '../domain/config/resolver';
 
-// Type alias for the dynamically imported debounce function.
+// Type aliases for dynamically imported modules
 type DebounceFnType = Awaited<typeof import('debounce-fn')>['default'];
+type IgnoreFactory = typeof import('ignore');
 
 /**
  * Manages the lifecycle of VS Code FileSystemWatchers for RepoScribe.
@@ -21,6 +22,7 @@ export class WorkspaceWatcher implements vscode.Disposable {
   private fs: FileSystem;
   private logger: Logger;
   private debounceFn: DebounceFnType | null = null;
+  private ignore: IgnoreFactory | null = null;
   private workspaceRoot: string;
   private isPaused = false;
 
@@ -45,6 +47,13 @@ export class WorkspaceWatcher implements vscode.Disposable {
    */
   public setDebounceFn(debounceFn: DebounceFnType): void {
     this.debounceFn = debounceFn;
+  }
+
+  private async getIgnoreFactory(): Promise<IgnoreFactory> {
+    if (!this.ignore) {
+      this.ignore = (await import('ignore')).default;
+    }
+    return this.ignore;
   }
 
   /**
@@ -72,29 +81,24 @@ export class WorkspaceWatcher implements vscode.Disposable {
       return;
     }
 
-    // 1. Dispose of any existing watchers to prevent duplicates
     this.disposeWatchers();
 
-    // 2. Resolve the current configuration to get the latest rules
     const config = await this.resolveCurrentConfig();
     this.logger.info(
       `Watchers re-initializing with output file: ${config.outputFile}`
     );
 
-    // 3. Create the debounced generation function with the latest delay
     this.debouncedGenerate = this.debounceFn(
       () => this.coordinator.generate(),
       { wait: config.regenerationDelay }
     );
 
-    // 4. Create a pre-filter based on the resolved config
     const preFilter = await this.createPreFilter(config);
     const relativeOutputFile = path.relative(
       this.workspaceRoot,
       path.join(this.workspaceRoot, config.outputFile)
     );
 
-    // 5. Setup the watcher for configuration files (.reposcribe.json, .gitignore)
     const configWatcher = vscode.workspace.createFileSystemWatcher(
       '**/{.reposcribe.json,.gitignore}'
     );
@@ -108,20 +112,13 @@ export class WorkspaceWatcher implements vscode.Disposable {
           uri.fsPath
         )}), triggering immediate regeneration and watcher reset.`
       );
-      // Immediately regenerate with new rules, then reset watchers to use them for future checks.
       this.coordinator.generate().then(() => this.resetWatchers());
     };
     configWatcher.onDidChange(onConfigChange);
     configWatcher.onDidCreate(onConfigChange);
     configWatcher.onDidDelete(onConfigChange);
 
-    // 6. Setup the general file watcher for all other files
-    const generalWatcher = vscode.workspace.createFileSystemWatcher(
-      '**/*',
-      false, // ignoreChangeEvents
-      false, // ignoreCreateEvents
-      false // ignoreDeleteEvents
-    );
+    const generalWatcher = vscode.workspace.createFileSystemWatcher('**/*');
 
     const onGeneralChange = (uri: vscode.Uri) => {
       if (this.isPaused || !this.debouncedGenerate) {
@@ -130,7 +127,6 @@ export class WorkspaceWatcher implements vscode.Disposable {
 
       const relativePath = path.relative(this.workspaceRoot, uri.fsPath);
 
-      // Pre-filter: Ignore changes to the output file or any file matching ignore rules
       if (
         relativePath === relativeOutputFile ||
         preFilter.ignores(relativePath)
@@ -149,13 +145,9 @@ export class WorkspaceWatcher implements vscode.Disposable {
     generalWatcher.onDidCreate(onGeneralChange);
     generalWatcher.onDidDelete(onGeneralChange);
 
-    // 7. Store new watchers in disposables array for cleanup
     this.disposables.push(configWatcher, generalWatcher);
   }
 
-  /**
-   * Resolves the current RepoScribe configuration from the workspace.
-   */
   private async resolveCurrentConfig(): Promise<RepoScribeConfig> {
     let userConfig: Partial<RepoScribeConfig> = {};
     const configUri = await this.fs.findFile('.reposcribe.json');
@@ -174,10 +166,8 @@ export class WorkspaceWatcher implements vscode.Disposable {
     return resolveConfig(BASE_CONFIG, userConfig);
   }
 
-  /**
-   * Creates an `ignore` instance pre-loaded with all exclusion rules.
-   */
   private async createPreFilter(config: RepoScribeConfig): Promise<Ignore> {
+    const ignore = await this.getIgnoreFactory();
     const gitignorePath = path.join(this.workspaceRoot, '.gitignore');
     let gitignoreContent = '';
     try {
@@ -188,9 +178,8 @@ export class WorkspaceWatcher implements vscode.Disposable {
 
     const filter = ignore();
     filter.add(gitignoreContent);
-    filter.add(config.exclude); // Add default and user-defined excludes
+    filter.add(config.exclude);
 
-    // Handle include rules: if includes are present, ignore everything *not* included.
     if (config.include && config.include.length > 0) {
       filter.add(['**/*', ...config.include.map((p) => `!${p}`)]);
     }

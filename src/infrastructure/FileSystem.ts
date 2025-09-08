@@ -1,13 +1,24 @@
 // src/infrastructure/FileSystem.ts
 import * as vscode from 'vscode';
-import * as fse from 'fs-extra';
 import * as path from 'path';
+
+// Dynamically imported module type for caching
+type FseType = typeof import('fs-extra');
 
 /**
  * A wrapper around file system operations, using VS Code's workspace API
  * and fs-extra for enhanced reliability like atomic writes.
  */
 export class FileSystem {
+  private fse: FseType | null = null;
+
+  private async getFsExtra(): Promise<FseType> {
+    if (!this.fse) {
+      this.fse = await import('fs-extra');
+    }
+    return this.fse;
+  }
+
   /**
    * Reads the content of a file using the VS Code workspace API.
    * @param filePath The absolute path to the file.
@@ -26,6 +37,7 @@ export class FileSystem {
    * @param content The content to write.
    */
   public async atomicWrite(filePath: string, content: string): Promise<void> {
+    const fse = await this.getFsExtra();
     const tmpPath = `${filePath}.${Date.now()}.tmp`;
     try {
       await fse.outputFile(tmpPath, content, 'utf8');
@@ -68,8 +80,6 @@ export class FileSystem {
       }
     }
 
-    // Use a simple check to see if the line already exists.
-    // This handles different line endings by splitting into lines.
     const lines = content.split(/\r?\n/);
     if (!lines.includes(outputFile)) {
       const newContent =
