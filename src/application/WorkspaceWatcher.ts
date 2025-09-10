@@ -1,12 +1,12 @@
 // src/application/WorkspaceWatcher.ts
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { Ignore } from 'ignore';
+import { type Ignore } from 'ignore';
 import { GenerationCoordinator } from './GenerationCoordinator';
 import { FileSystem } from '../infrastructure/FileSystem';
 import { Logger } from '../infrastructure/Logger';
-import { RepoScribeConfig, BASE_CONFIG } from '../domain/config/types';
-import { resolveConfig } from '../domain/config/resolver';
+import { RepoScribeConfig } from '../domain/config/types';
+import { ConfigurationService } from './ConfigurationService';
 
 // Type aliases for dynamically imported modules
 type DebounceFnType = Awaited<typeof import('debounce-fn')>['default'];
@@ -21,6 +21,7 @@ export class WorkspaceWatcher implements vscode.Disposable {
   private coordinator: GenerationCoordinator;
   private fs: FileSystem;
   private logger: Logger;
+  private configService: ConfigurationService;
   private debounceFn: DebounceFnType | null = null;
   private ignore: IgnoreFactory | null = null;
   private workspaceRoot: string;
@@ -33,12 +34,14 @@ export class WorkspaceWatcher implements vscode.Disposable {
     coordinator: GenerationCoordinator,
     fs: FileSystem,
     logger: Logger,
-    workspaceRoot: string
+    workspaceRoot: string,
+    configService: ConfigurationService
   ) {
     this.coordinator = coordinator;
     this.fs = fs;
     this.logger = logger;
     this.workspaceRoot = workspaceRoot;
+    this.configService = configService;
   }
 
   /**
@@ -83,7 +86,8 @@ export class WorkspaceWatcher implements vscode.Disposable {
 
     this.disposeWatchers();
 
-    const config = await this.resolveCurrentConfig();
+    const { resolvedConfig: config } =
+      await this.configService.getConfigContext();
     this.logger.info(
       `Watchers re-initializing with output file: ${config.outputFile}`
     );
@@ -100,7 +104,7 @@ export class WorkspaceWatcher implements vscode.Disposable {
     );
 
     const configWatcher = vscode.workspace.createFileSystemWatcher(
-      '**/{.reposcribe.json,.gitignore}'
+      '**/{.reposcribe.jsonc,.gitignore}'
     );
 
     const onConfigChange = (uri: vscode.Uri) => {
@@ -110,8 +114,9 @@ export class WorkspaceWatcher implements vscode.Disposable {
       this.logger.info(
         `Config file change detected (${path.basename(
           uri.fsPath
-        )}), triggering immediate regeneration and watcher reset.`
+        )}), clearing cache and triggering regeneration.`
       );
+      this.configService.clearCache();
       this.coordinator.generate().then(() => this.resetWatchers());
     };
     configWatcher.onDidChange(onConfigChange);
@@ -146,24 +151,6 @@ export class WorkspaceWatcher implements vscode.Disposable {
     generalWatcher.onDidDelete(onGeneralChange);
 
     this.disposables.push(configWatcher, generalWatcher);
-  }
-
-  private async resolveCurrentConfig(): Promise<RepoScribeConfig> {
-    let userConfig: Partial<RepoScribeConfig> = {};
-    const configUri = await this.fs.findFile('.reposcribe.json');
-    if (configUri) {
-      try {
-        const content = await this.fs.readFile(configUri.fsPath);
-        userConfig = JSON.parse(content);
-      } catch (error) {
-        this.logger.error(
-          `Failed to read .reposcribe.json for watcher: ${
-            (error as Error).message
-          }`
-        );
-      }
-    }
-    return resolveConfig(BASE_CONFIG, userConfig);
   }
 
   private async createPreFilter(config: RepoScribeConfig): Promise<Ignore> {

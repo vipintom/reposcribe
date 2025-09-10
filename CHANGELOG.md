@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-09-10
+
+### Added
+
+- **Generate for Selection**: Right-click on any file(s) or folder(s) in the Explorer to generate a snapshot for just that selection and copy it directly to your clipboard.
+- **Max File Size Limit**: Added a new `maxFileSizeKb` option in `.reposcribe.jsonc` to automatically exclude files that exceed a certain size, preventing oversized outputs.
+- **Configuration Caching**: Implemented an in-memory configuration cache to significantly boost performance on all generation tasks by minimizing redundant file reads.
+
+### Changed
+
+- **Major Configuration Overhaul**:
+  - The configuration file is now `.reposcribe.jsonc`, which supports comments. The `Create Configuration File` command now generates a self-documenting template to make customization easier.
+  - The filtering logic has been redesigned to be more powerful. User `include` patterns can now override default exclusions, giving you precise control to bring back files that would normally be ignored.
+- **Expanded Default Exclusions**: The list of built-in file exclusions has been significantly expanded to include dozens of common binary, media, document, and compiled artifact types for a much cleaner default snapshot.
+
+### Deprecated
+
+- The `.reposcribe.json` file format is now deprecated. The extension will display a warning and ignore this file, guiding users to migrate to the new `.reposcribe.jsonc` format.
+
 ## [0.3.8] - 2025-09-09
 
 ### Changed

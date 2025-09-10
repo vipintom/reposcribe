@@ -7,8 +7,7 @@ import { UIState, VSCodeUI } from './infrastructure/VSCodeUI';
 import { GenerationCoordinator } from './application/GenerationCoordinator';
 import { WorkspaceWatcher } from './application/WorkspaceWatcher';
 import { CommandRegistry } from './application/CommandRegistry';
-import { RepoScribeConfig, BASE_CONFIG } from './domain/config/types';
-import { resolveConfig } from './domain/config/resolver';
+import { ConfigurationService } from './application/ConfigurationService';
 
 const PAUSE_STATE_KEY = 'reposcribe.isPaused';
 
@@ -30,6 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
   // 1. Instantiate all services (all synchronous and fast)
   const logger = new Logger('RepoScribe');
   const fs = new FileSystem();
+  const configService = new ConfigurationService(fs, logger);
   const fileScanner = new FileScanner();
   const ui = new VSCodeUI('reposcribe.copyFileContent'); // Default click action
 
@@ -38,14 +38,16 @@ export function activate(context: vscode.ExtensionContext) {
     fs,
     fileScanner,
     ui,
-    workspaceRoot
+    workspaceRoot,
+    configService
   );
 
   const workspaceWatcher = new WorkspaceWatcher(
     coordinator,
     fs,
     logger,
-    workspaceRoot
+    workspaceRoot,
+    configService
   );
 
   // 2. Register all commands (synchronous)
@@ -56,7 +58,8 @@ export function activate(context: vscode.ExtensionContext) {
     coordinator,
     logger,
     ui,
-    workspaceWatcher
+    workspaceWatcher,
+    configService
   );
 
   // 3. Add services to subscriptions for cleanup (synchronous)
@@ -81,6 +84,42 @@ async function startup(
   coordinator: GenerationCoordinator,
   fs: FileSystem
 ) {
+  // Check for deprecated config file
+  const oldConfigUri = await fs.findFile('.reposcribe.json');
+  if (oldConfigUri) {
+    logger.warn(
+      `Deprecated '.reposcribe.json' file found and ignored at: ${oldConfigUri.fsPath}`
+    );
+
+    const createNewFileAction = 'Create .reposcribe.jsonc';
+    const deleteOldFileAction = 'Delete old file';
+    vscode.window
+      .showWarningMessage(
+        "The '.reposcribe.json' file is deprecated and is being ignored.",
+        createNewFileAction,
+        deleteOldFileAction
+      )
+      .then(async (selection) => {
+        if (selection === createNewFileAction) {
+          vscode.commands.executeCommand('reposcribe.createConfigFile');
+        } else if (selection === deleteOldFileAction) {
+          try {
+            await vscode.workspace.fs.delete(oldConfigUri);
+            vscode.window.showInformationMessage(
+              'Successfully deleted the deprecated .reposcribe.json file.'
+            );
+            logger.info(`User deleted deprecated file: ${oldConfigUri.fsPath}`);
+          } catch (error) {
+            const err = error as Error;
+            logger.error(`Failed to delete old config file: ${err.message}`);
+            vscode.window.showErrorMessage(
+              `Failed to delete .reposcribe.json: ${err.message}`
+            );
+          }
+        }
+      });
+  }
+
   const { default: debounceFn } = await import('debounce-fn');
   watcher.setDebounceFn(debounceFn);
 
@@ -116,34 +155,8 @@ async function startup(
     }
   } else {
     ui.updateStatus(UIState.IDLE);
-    runInitialGeneration(coordinator, fs, logger);
+    coordinator.generate();
   }
-}
-
-/**
- * Performs the initial, potentially slow, setup and generation task.
- */
-async function runInitialGeneration(
-  coordinator: GenerationCoordinator,
-  fs: FileSystem,
-  logger: Logger
-): Promise<void> {
-  logger.info('Performing initial configuration resolution for first run.');
-  let userConfig: Partial<RepoScribeConfig> = {};
-  const configUri = await fs.findFile('.reposcribe.json');
-  if (configUri) {
-    try {
-      const content = await fs.readFile(configUri.fsPath);
-      userConfig = JSON.parse(content);
-    } catch (error) {
-      logger.error(
-        `Failed to read initial config: ${(error as Error).message}`
-      );
-    }
-  }
-  const initialConfig = resolveConfig(BASE_CONFIG, userConfig);
-
-  coordinator.generate(initialConfig);
 }
 
 /**

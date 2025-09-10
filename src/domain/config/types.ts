@@ -7,11 +7,19 @@ export interface RepoScribeConfig {
   exclude: string[];
   languageMap: LanguageMap;
   regenerationDelay: number;
+  maxFileSizeKb: number;
 }
 
 /**
- * The base configuration containing default values for RepoScribe.
- * This is merged with the user's .reposcribe.json configuration.
+ * DEVELOPMENT POLICY:
+ * To ensure backward compatibility, any new property added to the
+ * `RepoScribeConfig` interface MUST also be given a default value in this
+ * `BASE_CONFIG` object. This prevents the extension from breaking for users
+ * who have an existing `.reposcribe.jsonc` file that does not yet include
+ * the new property.
+ *
+ * The `resolveConfig` function relies on this principle to merge user
+ * settings over a complete set of defaults.
  */
 export const BASE_CONFIG: RepoScribeConfig = {
   outputFile: 'PROJECT_STRUCTURE.md',
@@ -51,7 +59,35 @@ export const BASE_CONFIG: RepoScribeConfig = {
     '**/*.tmp',
     '**/*.db-journal',
 
-    // Binaries & Media
+    // Compiled Artifacts
+    '**/*.class',
+    '**/*.jar',
+    '**/*.war',
+    '**/*.ear',
+    '**/*.dll',
+    '**/*.exe',
+    '**/*.o',
+    '**/*.so',
+    '**/*.a',
+
+    // Compressed Archives
+    '**/*.zip',
+    '**/*.tar',
+    '**/*.tar.gz',
+    '**/*.rar',
+    '**/*.7z',
+    '**/*.bz2',
+
+    // Documents
+    '**/*.pdf',
+    '**/*.doc',
+    '**/*.docx',
+    '**/*.xls',
+    '**/*.xlsx',
+    '**/*.ppt',
+    '**/*.pptx',
+
+    // Media & Images
     '**/*.png',
     '**/*.jpg',
     '**/*.jpeg',
@@ -59,27 +95,35 @@ export const BASE_CONFIG: RepoScribeConfig = {
     '**/*.svg',
     '**/*.ico',
     '**/*.webp',
-    '**/*.pdf',
-    '**/*.zip',
-    '**/*.tar.gz',
-    '**/*.rar',
-    '**/*.7z',
+    '**/*.mov',
+    '**/*.mp4',
+    '**/*.avi',
+    '**/*.webm',
+    '**/*.mp3',
+    '**/*.wav',
+    '**/*.flac',
+    '**/*.psd',
+    '**/*.ai',
+    '**/*.eps',
+
+    // Fonts
     '**/*.woff',
     '**/*.woff2',
     '**/*.eot',
     '**/*.ttf',
     '**/*.otf',
-    '**/*.mp3',
-    '**/*.mp4',
-    '**/*.webm',
-    '**/*.avi',
-    '**/*.mov',
+
+    // Disk Images & VMs
+    '**/*.iso',
+    '**/*.vmdk',
+    '**/*.vdi',
 
     // Lock files
     '**/package-lock.json',
     '**/pnpm-lock.yaml',
     '**/yarn.lock',
     '**/composer.lock',
+    '**/uv.lock',
   ],
   languageMap: {
     '.js': 'javascript',
@@ -109,4 +153,5 @@ export const BASE_CONFIG: RepoScribeConfig = {
     '.gitignore': 'gitignore',
   },
   regenerationDelay: 1500,
+  maxFileSizeKb: 2048,
 };

@@ -2,7 +2,7 @@
   "name": "reposcribe",
   "displayName": "RepoScribe",
   "description": "Automatically generates and maintains a single Markdown file snapshot of your project's source code, perfect for LLM context, documentation, or code reviews.",
-  "version": "0.3.8",
+  "version": "0.4.0",
   "publisher": "vipin-tom-varghese",
   "license": "MIT",
   "repository": {
@@ -43,8 +43,21 @@
       {
         "command": "reposcribe.copyFileContent",
         "title": "RepoScribe: Copy Output File Content"
+      },
+      {
+        "command": "reposcribe.generateForSelection",
+        "title": "RepoScribe: Generate Snapshot for Selection"
       }
-    ]
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "reposcribe.generateForSelection",
+          "when": "explorerResourceCount >= 1",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm esbuild",
@@ -78,6 +91,7 @@
     "debounce-fn": "^6.0.0",
     "fast-glob": "^3.3.3",
     "fs-extra": "^11.3.1",
-    "ignore": "^7.0.5"
+    "ignore": "^7.0.5",
+    "jsonc-parser": "^3.3.1"
   }
 }

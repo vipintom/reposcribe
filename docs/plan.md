@@ -1,170 +1,115 @@
-# Implementation Plan: RepoScribe VS Code Extension
+### **RepoScribe Feature Development Plan**
 
-## **Phase 1: Foundation & Core Domain Logic**
+#### **1. Handle Unhandled Binary & Large File Content**
 
-This phase focuses on establishing the pure, testable, and dependency-free core business logic of RepoScribe. We will define all data structures and implement the core algorithms for configuration management, tree generation, and Markdown rendering within the `src/domain` directory, without touching any VS Code APIs.
+- **Task 1.1: Expand Default Exclusions**
 
-- [ ] **1. Set Up Core Infrastructure (Logging)**
+  - **Goal:** Proactively prevent common non-text files from being processed.
+  - **Action:** Research and augment the `exclude` array in `domain/config/types.ts` (`BASE_CONFIG`).
+  - **File Types to Add:**
+    - **Compiled Artifacts:** `.class`, `.jar`, `.war`, `.ear`, `.dll`, `.exe`, `.o`, `.so`, `.a`
+    - **Media/Images:** `.mov`, `.mp4`, `.avi`, `.webm`, `.mp3`, `.wav`, `.flac`, `.psd`, `.ai`, `.eps`
+    - **Fonts:** `.woff`, `.woff2`, `.eot`, `.ttf`, `.otf`
+    - **Compressed Archives:** `.zip`, `.tar`, `.gz`, `.rar`, `.7z`, `.bz2`
+    - **Documents:** `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx`
+    - **Disk Images/VMs:** `.iso`, `.vmdk`, `.vdi`
 
-  - [ ] Create the directory `src/infrastructure`.
-  - [ ] Create the file `src/infrastructure/Logger.ts`.
-  - [ ] Implement a `Logger` class that wraps a VS Code `OutputChannel`.
-  - [ ] Define methods `info(message: string)`, `warn(message: string)`, `error(message: string | Error)`, and a private `log(level: string, message: string)` method.
-  - [ ] Add a `dispose()` method to clean up the output channel.
+- **Task 1.2: Ensure Crash Prevention (Verification)**
 
-- [ ] **2. Define Core Domain Types**
+  - **Goal:** Confirm that the application never crashes when attempting to read a problematic file.
+  - **Action:** Review the `try/catch` block within the file-reading loop in `GenerationCoordinator.ts`. Ensure that it correctly catches errors, logs a warning, and inserts a placeholder message (e.g., `[Error reading file]`) without stopping the entire generation process. This mechanism is already in place and just needs verification.
 
-  - [ ] Create the file `src/domain/config/types.ts`.
-  - [ ] Define and export the `RepoScribeConfig` interface with properties: `outputFile`, `include`, `exclude`, and `languageMap`.
-  - [ ] Create the file `src/domain/workspace/types.ts`.
-  - [ ] Define and export the `FileNode` interface with properties: `name: string`, `path: string`, `type: 'file' | 'directory'`, and `children: FileNode[]`.
-  - [ ] Create the file `src/domain/markdown/types.ts`.
-  - [ ] Define and export a `LanguageMap` type alias: `export type LanguageMap = Record<string, string>;`.
-
-- [ ] **3. Implement Configuration Domain Logic**
-
-  - [ ] In `src/domain/config/types.ts`, define and export a `BASE_CONFIG` constant of type `RepoScribeConfig` containing all default values (e.g., `outputFile: 'PROJECT_STRUCTURE.md'`, default binary exclusions).
-  - [ ] Create the file `src/domain/config/resolver.ts`.
-  - [ ] Implement a pure function `resolveConfig(baseConfig: RepoScribeConfig, userConfig?: Partial<RepoScribeConfig>): RepoScribeConfig`.
-  - [ ] Ensure the function correctly merges the user's config over the base config, with user values taking precedence.
-
-- [ ] **4. Implement Workspace Domain Logic (File Tree)**
-
-  - [ ] Create the file `src/domain/workspace/FileTree.ts`.
-  - [ ] Implement a class or function `buildFileTree(filePaths: string[]): FileNode`.
-  - [ ] The function should take a flat, sorted array of file paths.
-  - [ ] It must correctly construct a hierarchical `FileNode` tree structure from the paths.
-  - [ ] Implement the sorting logic within the tree construction: directories first (alphabetically), then files (alphabetically) at each level.
-
-- [ ] **5. Implement Markdown Domain Logic (Builder)**
-  - [ ] Create the file `src/domain/markdown/MarkdownBuilder.ts`.
-  - [ ] Implement a `MarkdownBuilder` class.
-  - [ ] Create a private method `renderTree(root: FileNode): string` that recursively generates the ASCII tree representation.
-  - [ ] Create a private method `renderFileContent(filePath: string, content: string, languageMap: LanguageMap): string` that formats the content into a Markdown section with a fenced code block.
-  - [ ] Create a public method `build(tree: FileNode, fileContents: Map<string, string>, languageMap: LanguageMap): string`.
-  - [ ] This `build` method will orchestrate calling the tree and content renderers to assemble the final, complete Markdown string according to the required structure.
+- **Task 1.3: Implement Max File Size Limit**
+  - **Goal:** Allow users to define a file size threshold to avoid including excessively large files.
+  - **Action:** 1. Add a new property `maxFileSizeKb: number` to the `RepoScribeConfig` interface in `domain/config/types.ts`. 2. Set a sensible default value in `BASE_CONFIG` (e.g., `maxFileSizeKb: 2048` for 2MB). 3. In `GenerationCoordinator.ts`, before the `Promise.all` that reads file contents, modify the logic. For each file path, first use `vscode.workspace.fs.stat(uri)` to get its size. 4. If `file.size > config.maxFileSizeKb * 1024`, do not read the file. Instead, directly set its content in the `fileContents` map to a placeholder message like `[File content omitted: Exceeds ${config.maxFileSizeKb} KB size limit]`. 5. If the file is within the size limit, proceed with reading its content as normal.
 
 ---
 
-## **Phase 2: Infrastructure & Application Layer Implementation**
+#### **2. Overhaul Configuration System for Usability and Power**
 
-This phase focuses on building the "impure" layers of the application that interact with the external world (VS Code APIs, file system). We will implement the concrete services for scanning files, reading/writing to disk, and managing the UI, then orchestrate them with an application-level coordinator.
+- **Task 2.1: Transition to JSONC for Comments**
 
-- [ ] **6. Implement File System Infrastructure**
+  - **Goal:** Enable comments in the configuration file to make it more user-friendly and educational.
+  - **Action:** 1. Add the `jsonc-parser` library as a dependency. 2. Update the configuration reading logic to use `jsonc.parse()` instead of the standard `JSON.parse()` to handle files with comments. 3. Update services to look for `.reposcribe.jsonc` as the primary configuration file.
 
-  - [ ] Create the file `src/infrastructure/FileSystem.ts`.
-  - [ ] Implement a `FileSystem` class.
-  - [ ] Add a method `readFile(filePath: string): Promise<string>` that wraps `vscode.workspace.fs.readFile`.
-  - [ ] Add a method `atomicWrite(filePath: string, content: string): Promise<void>` that uses `fs-extra` to write to a `.tmp` file and then atomically move it.
-  - [ ] Add a method `updateGitignore(workspaceRoot: string, outputFile: string): Promise<void>` to read, update, and write the `.gitignore` file.
-  - [ ] Add a method `findFile(globPattern: string): Promise<vscode.Uri | undefined>` to find a single file like `.reposcribe.json`.
+- **Task 2.2: Redesign Generated Config File**
 
-- [ ] **7. Implement File Scanner Infrastructure**
+  - **Goal:** Create a self-documenting and less error-prone configuration file for users.
+  - **Action:** 1. Modify the `RepoScribe: Create Configuration File` command. 2. The command will now create a file named `.reposcribe.jsonc`. 3. The file's content will be a template that includes comments explaining the purpose of each field and listing examples of default exclusions. 4. The generated `exclude` array will be empty by default, encouraging users to _add_ their own rules rather than editing a large pre-filled list.
 
-  - [ ] Create the file `src/infrastructure/FileScanner.ts`.
-  - [ ] Implement a `FileScanner` class.
-  - [ ] Create a method `scan(workspaceRoot: string, config: RepoScribeConfig, gitignoreContent: string): Promise<string[]>`.
-  - [ ] Implement the full filtering and precedence logic inside this method:
-    - [ ] Use `fast-glob` to get all files.
-    - [ ] Use the `ignore` package to apply `.gitignore` rules.
-    - [ ] Apply the default binary exclusions from the resolved config.
-    - [ ] Apply the `include` patterns from the resolved config.
-    - [ ] Apply the `exclude` patterns from the resolved config.
-    - [ ] Return the final, sorted list of absolute file paths.
+- **Task 2.3: Implement New Filtering Precedence**
 
-- [ ] **8. Implement VS Code UI Infrastructure**
+  - **Goal:** Allow a user's `include` patterns to act as an override for default `exclude` patterns.
+  - **Action:** Modify the `scan` method in `infrastructure/FileScanner.ts` to follow this exact sequence: 1. Apply `.gitignore` rules to the initial list of all files. 2. Apply the default `BASE_CONFIG.exclude` rules to the result. 3. From the files that were just excluded, **add back** any that match a pattern in the user's `include` array. 4. Finally, **remove** any files from the resulting list that match a pattern in the user's `exclude` array. This ensures the user's `exclude` is the final authority.
 
-  - [ ] Create the file `src/infrastructure/VSCodeUI.ts`.
-  - [ ] Implement a `VSCodeUI` class to manage the Status Bar item.
-  - [ ] Define an enum for UI states: `State { IDLE, GENERATING, UPDATED, ERROR }`.
-  - [ ] Create a method `updateStatus(state: State, details?: string)` that updates the status bar's text, icon, and tooltip based on the provided state.
-  - [ ] Implement a `dispose()` method to hide and dispose of the status bar item.
-  - [ ] Configure the status bar item to open the output file on click.
-
-- [ ] **9. Implement the Application Layer Coordinator**
-  - [ ] Create the directory `src/application`.
-  - [ ] Create the file `src/application/GenerationCoordinator.ts`.
-  - [ ] Implement the `GenerationCoordinator` class.
-  - [ ] The constructor should accept dependencies: `Logger`, `FileSystem`, `FileScanner`, `VSCodeUI`, and the workspace root path.
-  - [ ] Create a main public method `generate(): Promise<void>`.
-  - [ ] Implement the end-to-end generation logic inside `generate()`:
-    - [ ] Update UI to `GENERATING` state.
-    - [ ] Read `.reposcribe.json` and `.gitignore`.
-    - [ ] Resolve the final configuration using the domain `resolveConfig` function.
-    - [ ] Call `FileScanner.scan()` to get the file list.
-    - [ ] Call the domain `buildFileTree()` function.
-    - [ ] Concurrently read all file contents using `FileSystem.readFile` and `Promise.all`.
-    - [ ] Call the domain `MarkdownBuilder.build()` to get the final string.
-    - [ ] Call `FileSystem.atomicWrite()` to save the output file.
-    - [ ] Call `FileSystem.updateGitignore()`.
-    - [ ] Update UI to `UPDATED` state.
-    - [ ] Add `try/catch` blocks to handle errors and update UI to `ERROR` state.
+- **Task 2.4: Deprecate old `.reposcribe.json`**
+  - **Goal:** Guide users to migrate to the new format and simplify the codebase by removing support for the old format.
+  - **Action:** 1. In the extension's startup logic, add a check for the existence of a `.reposcribe.json` file. 2. If the old file is found, the extension will **not** use it for configuration. 3. Instead, it will trigger a one-time `vscode.window.showWarningMessage` with a clear message: "The `.reposcribe.json` file is deprecated and is being ignored. Please use the `RepoScribe: Create Configuration File` command to generate a new `.reposcribe.jsonc` file and migrate your settings."
 
 ---
 
-## **Phase 3: Composition & End-to-End Integration**
+#### **3. Implement Configuration Caching**
 
-This phase brings the entire application to life. We will focus on the `src/extension.ts` file, acting as the "Composition Root" to instantiate and connect all the domain, application, and infrastructure components. We'll implement the extension's activation, initial run, and file watching capabilities.
+- **Task 3.1: Design `ConfigurationService`**
 
-- [ ] **10. Instantiate and Wire Dependencies in `extension.ts`**
+  - **Goal:** Centralize configuration management to prevent redundant file reads and ensure consistency.
+  - **Action:** Plan a new service class, `ConfigurationService`, within the `application` layer.
 
-  - [ ] Clear the boilerplate code from `src/extension.ts`.
-  - [ ] In the `activate` function, get the workspace root folder. Handle the case where no folder is open.
-  - [ ] Instantiate the `Logger`.
-  - [ ] Instantiate the `VSCodeUI` and pass it the `ExtensionContext`.
-  - [ ] Instantiate the `FileSystem`.
-  - [ ] Instantiate the `FileScanner`.
-  - [ ] Instantiate the `GenerationCoordinator`, injecting all the previously created services.
-  - [ ] Store the `GenerationCoordinator` instance for access by watchers.
+- **Task 3.2: Define Service Responsibilities**
 
-- [ ] **11. Trigger Initial Generation on Activation**
+  - **Action:** The service will have:
+    - A private property to hold the cached `RepoScribeConfig`.
+    - A public method, `getResolvedConfig(): Promise<RepoScribeConfig>`, which reads from the file system only if the cache is empty, then stores and returns the result.
+    - A public method, `clearCache()`, to invalidate the cache.
 
-  - [ ] In `activate`, after instantiation, call `coordinator.generate()` to run the first scan when the extension loads.
-  - [ ] Ensure the context's `subscriptions` array is populated with disposable items like the `Logger` and `VSCodeUI` to ensure clean shutdown.
-
-- [ ] **12. Implement File Watchers for Automatic Updates**
-
-  - [ ] Create a `setupWatchers(coordinator: GenerationCoordinator)` function in `extension.ts`.
-  - [ ] Use `vscode.workspace.createFileSystemWatcher` to create a general watcher for `**/*`.
-  - [ ] The watcher should ignore the path of the configured output file to prevent infinite loops. This requires reading the config first.
-  - [ ] Hook up the `onDidCreate`, `onDidDelete`, and `onDidChange` events of the watcher.
-  - [ ] Create watchers specifically for `.gitignore` and `.reposcribe.json` that trigger immediate regeneration.
-
-- [ ] **13. Implement Debouncing for File Change Events**
-  - [ ] Install `debounce-fn`.
-  - [ ] In `extension.ts`, create a debounced version of the `coordinator.generate()` method call using `debounceFn`.
-  - [ ] The debounce delay should be ~1.5 seconds as specified in requirements.
-  - [ ] Call this debounced function from the general file watcher's events (`onDidCreate`, etc.).
-  - [ ] The config file watchers (`.gitignore`, `.reposcribe.json`) should call `coordinator.generate()` directly, without debouncing.
+- **Task 3.3: Refactor for Dependency Injection**
+  - **Action:** 1. Instantiate `ConfigurationService` in `extension.ts`. 2. Pass this instance to `GenerationCoordinator` and `WorkspaceWatcher`. 3. Modify the `WorkspaceWatcher` so that when it detects a change to `.reposcribe.jsonc`, it calls `configService.clearCache()` before triggering regeneration. 4. Update all components to get configuration via the service instead of reading the file directly.
 
 ---
 
-## **Phase 4: Finalization, UX Refinements & Packaging**
+#### **4. Simplify and Harden the File Scanner**
 
-With the core functionality in place, this final phase focuses on polishing the user experience, hardening the extension against edge cases, and preparing it for packaging and distribution.
+- **Task 4.1: Refactor `FileScanner` Logic**
 
-- [ ] **14. Finalize Status Bar Behavior**
+  - **Goal:** Improve the clarity and robustness of the file filtering logic.
+  - **Action:** Modify the `scan` method in `infrastructure/FileScanner.ts` to align with the new precedence rules defined in Task 2.3.
 
-  - [ ] Thoroughly test the status bar state transitions: `Idle` -> `Generating` -> `Updated` / `Error`.
-  - [ ] Ensure the `$(sync~spin)` icon is used for the `Generating` state.
-  - [ ] Verify that clicking the status bar item opens the generated Markdown file correctly.
-  - [ ] Add a `command` to `package.json` and register it in `extension.ts` to handle the status bar click action.
+- **Task 4.2: Maintain Precedence Rules (Verification)**
+  - **Action:** After refactoring, confirm that the strict filtering order defined in Task 2.3 is correctly implemented and produces the expected results.
 
-- [ ] **15. Enhance Error Handling and Logging**
+---
 
-  - [ ] Review the `GenerationCoordinator` and add detailed logging at each major step (e.g., "Config resolved", "Found X files", "Writing output to Y").
-  - [ ] Ensure that file read errors for individual files are logged but do not stop the entire generation process (e.g., render a placeholder like `[Error reading file]`).
-  - [ ] Ensure critical errors (e.g., config parsing failure, atomic write failure) are logged and displayed in the UI.
+#### **5. Ensure Backward Compatibility of Configuration (Verification)**
 
-- [ ] **16. Add Final TSDoc Comments & Clean Up**
+- **Task 5.1: Verify `resolveConfig` Behavior**
 
-  - [ ] Add TSDoc comments to all public classes and methods in the `domain`, `application`, and `infrastructure` layers.
-  - [ ] Remove any `console.log` statements, ensuring all output goes through the centralized `Logger`.
-  - [ ] Review `package.json` to remove the boilerplate "Hello World" command.
-  - [ ] Update the `activationEvents` in `package.json` to `onStartupFinished` or a more appropriate event if needed.
+  - **Goal:** Confirm that adding new settings does not break existing user configurations (for users with valid `.reposcribe.jsonc` files).
+  - **Action:** Review the `resolveConfig` function in `domain/config/resolver.ts`. The current spread syntax remains correct for merging new properties like `maxFileSizeKb`.
 
-- [ ] **17. Prepare for Publishing**
-  - [ ] Update the `README.md` file with instructions on how to use the extension, including configuration options.
-  - [ ] Update the `CHANGELOG.md` with initial release notes.
-  - [ ] Verify the `esbuild` script in `package.json` produces a clean, minified build for publishing.
-  - [ ] Use `vsce package` to create a VSIX file and test installation locally.
+- **Task 5.2: Establish "New Config" Policy**
+  - **Goal:** Formalize the process for adding new configuration options.
+  - **Action:** Document as a team convention that any new property added to the `RepoScribeConfig` interface **must** also be given a default value in the `BASE_CONFIG` object.
+
+---
+
+#### **6. Add "Generate for Folder" Context Menu**
+
+- **Task 6.1: Create UI Contribution**
+
+  - **Goal:** Add a right-click context menu item for folders in the Explorer view.
+  - **Action:** 1. Modify `package.json`. 2. Define a new command: `reposcribe.generateForFolder`. 3. Add a menu contribution to `contributes.menus` targeting `explorer/context`. 4. Set the `when` clause to `explorerResourceIsFolder` to ensure it only appears on directories.
+
+- **Task 6.2: Register the Command**
+
+  - **Goal:** Connect the UI item to the application logic.
+  - **Action:** 1. Modify `src/application/CommandRegistry.ts`. 2. Register the `reposcribe.generateForFolder` command. 3. The command handler will accept the folder `vscode.Uri` as an argument. 4. The handler will call a new method on the `GenerationCoordinator` (e.g., `generateMarkdownForPath`). 5. Upon receiving the markdown string from the coordinator, the handler will copy it to the clipboard using `vscode.env.clipboard.writeText()` and show a confirmation message.
+
+- **Task 6.3: Implement Application Service Method**
+  - **Goal:** Create a new method in the coordinator that can generate markdown for a specific path without writing to a file.
+  - **Action:** 1. Modify `src/application/GenerationCoordinator.ts`. 2. Create a new public method: `generateMarkdownForPath(folderPath: string): Promise<string>`. 3. This method's implementation will reuse existing logic:
+    a. Resolve the full workspace configuration and read `.gitignore`.
+    b. Call `scanner.scan()` to get the complete, filtered list of files for the **entire workspace**.
+    c. In-memory, filter this list to include only files that are descendants of the given `folderPath`.
+    d. Prepare the filtered paths for the domain logic (e.g., make them relative to `folderPath`).
+    e. Call the existing `buildFileTree` and `markdownBuilder.build` domain functions with the filtered data.
+    f. **Return** the generated markdown string instead of writing it to a file.

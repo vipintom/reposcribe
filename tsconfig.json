@@ -4,11 +4,11 @@
     "moduleResolution": "bundler",
     "target": "ES2022",
     "lib": ["ES2022"],
-    "outDir": "dist" /* Safeguard: Redirects TSC output if noEmit is false */,
+    "outDir": "dist",
     "sourceMap": true,
     "rootDir": "src",
     "strict": true,
-    "noEmit": true /* BEST PRACTICE: Prevents TSC from creating .js files; lets esbuild handle it. */
+    "noEmit": true
   },
   "include": ["src"],
   "exclude": ["node_modules", ".vscode-test"]

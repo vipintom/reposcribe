@@ -120,7 +120,7 @@ export class VSCodeUI implements vscode.Disposable {
         break;
     }
 
-    this.statusBarItem.text = `${baseIcon} ${stateIcon}`;
+    this.statusBarItem.text = `${baseIcon} | ${stateIcon}`;
 
     if (state === UIState.ERROR) {
       this.statusBarItem.backgroundColor = new vscode.ThemeColor(
