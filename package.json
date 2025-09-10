@@ -53,7 +53,7 @@
       "explorer/context": [
         {
           "command": "reposcribe.generateForSelection",
-          "when": "explorerResourceCount >= 1",
+          "when": "resourceScheme == 'file'",
           "group": "navigation"
         }
       ]
