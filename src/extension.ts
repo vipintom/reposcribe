@@ -30,7 +30,7 @@ export function activate(context: vscode.ExtensionContext) {
   const logger = new Logger('RepoScribe');
   const fs = new FileSystem();
   const configService = new ConfigurationService(fs, logger);
-  const fileScanner = new FileScanner();
+  const fileScanner = new FileScanner(logger);
   const ui = new VSCodeUI('reposcribe.copyFileContent'); // Default click action
 
   const coordinator = new GenerationCoordinator(
@@ -84,18 +84,22 @@ async function startup(
   coordinator: GenerationCoordinator,
   fs: FileSystem
 ) {
-  // Check for deprecated config file
-  const oldConfigUri = await fs.findFile('.reposcribe.json');
-  if (oldConfigUri) {
+  // Check for deprecated config files
+  const oldJsonConfig = await fs.findConfig('.reposcribe.json');
+  const oldJsoncConfig = await fs.findConfig('.reposcribe.jsonc');
+  const deprecatedConfig = oldJsonConfig || oldJsoncConfig;
+
+  if (deprecatedConfig) {
+    const fileName = deprecatedConfig.fsPath.split('/').pop();
     logger.warn(
-      `Deprecated '.reposcribe.json' file found and ignored at: ${oldConfigUri.fsPath}`
+      `Deprecated '${fileName}' file found and ignored at: ${deprecatedConfig.fsPath}`
     );
 
-    const createNewFileAction = 'Create .reposcribe.jsonc';
-    const deleteOldFileAction = 'Delete old file';
+    const createNewFileAction = 'Create .reposcribe.config.js';
+    const deleteOldFileAction = `Delete ${fileName}`;
     vscode.window
       .showWarningMessage(
-        "The '.reposcribe.json' file is deprecated and is being ignored.",
+        `The '${fileName}' file is deprecated and is being ignored. Please migrate to '.reposcribe.config.js'.`,
         createNewFileAction,
         deleteOldFileAction
       )
@@ -104,16 +108,18 @@ async function startup(
           vscode.commands.executeCommand('reposcribe.createConfigFile');
         } else if (selection === deleteOldFileAction) {
           try {
-            await vscode.workspace.fs.delete(oldConfigUri);
+            await vscode.workspace.fs.delete(deprecatedConfig);
             vscode.window.showInformationMessage(
-              'Successfully deleted the deprecated .reposcribe.json file.'
+              `Successfully deleted the deprecated ${fileName} file.`
             );
-            logger.info(`User deleted deprecated file: ${oldConfigUri.fsPath}`);
+            logger.info(
+              `User deleted deprecated file: ${deprecatedConfig.fsPath}`
+            );
           } catch (error) {
             const err = error as Error;
             logger.error(`Failed to delete old config file: ${err.message}`);
             vscode.window.showErrorMessage(
-              `Failed to delete .reposcribe.json: ${err.message}`
+              `Failed to delete ${fileName}: ${err.message}`
             );
           }
         }

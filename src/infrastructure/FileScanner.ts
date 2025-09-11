@@ -2,6 +2,7 @@
 import * as path from 'path';
 import type { RepoScribeConfig } from '../domain/config/types';
 import type fg from 'fast-glob'; // Use a type-only import to get the correct type
+import { Logger } from './Logger';
 
 // Dynamically imported module types for caching
 type FgType = typeof fg;
@@ -14,6 +15,8 @@ type IgnoreFactory = typeof import('ignore');
 export class FileScanner {
   private fg: FgType | null = null;
   private ignore: IgnoreFactory | null = null;
+
+  constructor(private readonly logger: Logger) {}
 
   private async getFg(): Promise<FgType> {
     if (!this.fg) {
@@ -43,11 +46,13 @@ export class FileScanner {
   public async scan(
     workspaceRoot: string,
     config: RepoScribeConfig,
-    baseConfig: RepoScribeConfig, // Still needed to differentiate base/user excludes for include logic
+    userConfig: Partial<RepoScribeConfig>,
+    baseConfig: RepoScribeConfig,
     gitignoreContent: string
   ): Promise<string[]> {
     const fg = await this.getFg();
     const ignore = await this.getIgnoreFactory();
+    this.logger.info('--- Starting File Scan ---');
 
     // Stage 1: Discover All files
     const allAbsoluteFiles = await fg('**/*', {
@@ -61,41 +66,90 @@ export class FileScanner {
     const allRelativeFiles = allAbsoluteFiles.map((file) =>
       path.relative(workspaceRoot, file)
     );
+    this.logger.info(
+      `[SCANNER] Stage 1: Found ${allRelativeFiles.length} total files.`
+    );
 
     // Stage 2: Apply `.gitignore`
     const gitignoreFilter = ignore().add(gitignoreContent);
     const filesAfterGitignore = gitignoreFilter.filter(allRelativeFiles);
+    this.logger.info(
+      `[SCANNER] Stage 2: ${filesAfterGitignore.length} files remain after .gitignore filter.`
+    );
 
-    // Stage 3: Apply default `exclude` rules ONLY
+    // Stage 3: Apply default `exclude` rules
     const baseExcludeFilter = ignore().add(baseConfig.exclude);
     const filesAfterBaseExclude = baseExcludeFilter.filter(filesAfterGitignore);
+    this.logger.info(
+      `[SCANNER] Stage 3: ${filesAfterBaseExclude.length} files remain after default exclude filter.`
+    );
 
     // Stage 4: Add back files based on user's `include` patterns
-    let filesAfterInclude = filesAfterBaseExclude;
+    let listBeforeUserExclude = filesAfterBaseExclude;
     if (config.include && config.include.length > 0) {
+      this.logger.info(
+        `[SCANNER] Stage 4: Processing ${
+          config.include.length
+        } user 'include' patterns: [${config.include.join(', ')}]`
+      );
       // Find which files were excluded by the base config
       const filesAfterBaseExcludeSet = new Set(filesAfterBaseExclude);
       const filesExcludedByBase = filesAfterGitignore.filter(
         (file) => !filesAfterBaseExcludeSet.has(file)
       );
+      this.logger.info(
+        `[SCANNER]          - Checking ${filesExcludedByBase.length} files that were excluded by default rules.`
+      );
 
-      // Create a filter that keeps only files matching the `include` patterns
-      const includePatterns = ['**/*', ...config.include.map((p) => `!${p}`)];
-      const includeFilter = ignore().add(includePatterns);
+      // Create a filter that keeps only files matching the `include` patterns.
+      const includeFilter = ignore()
+        .add('**/*')
+        .add(config.include.map((p) => `!${p}`));
+
       const filesToUnexclude = includeFilter.filter(filesExcludedByBase);
+      this.logger.info(
+        `[SCANNER]          - Re-included ${filesToUnexclude.length} files matching 'include' patterns.`
+      );
 
       // Add the re-included files back to the list
-      filesAfterInclude = [...filesAfterBaseExclude, ...filesToUnexclude];
+      listBeforeUserExclude = [...filesAfterBaseExclude, ...filesToUnexclude];
+      this.logger.info(
+        `[SCANNER]          - File count is now ${listBeforeUserExclude.length}.`
+      );
+    } else {
+      this.logger.info(
+        '[SCANNER] Stage 4: No user "include" patterns to process.'
+      );
     }
 
-    // Stage 5: Apply the FULL `exclude` list (base + user) as the final filter
-    const finalExcludeFilter = ignore().add(config.exclude);
-    const finalRelativeFiles = finalExcludeFilter.filter(filesAfterInclude);
+    // Stage 5: Apply user-specific `exclude` rules as the final filter.
+    const userExcludes = userConfig.exclude || [];
+
+    let finalRelativeFiles = listBeforeUserExclude;
+    if (userExcludes.length > 0) {
+      this.logger.info(
+        `[SCANNER] Stage 5: Applying ${
+          userExcludes.length
+        } user-specific 'exclude' patterns: [${userExcludes.join(', ')}]`
+      );
+      const userExcludeFilter = ignore().add(userExcludes);
+      finalRelativeFiles = userExcludeFilter.filter(listBeforeUserExclude);
+      this.logger.info(
+        `[SCANNER]          - Final file count after user excludes: ${finalRelativeFiles.length}.`
+      );
+    } else {
+      this.logger.info(
+        '[SCANNER] Stage 5: No user-specific "exclude" patterns to apply.'
+      );
+    }
 
     const finalAbsoluteFiles = finalRelativeFiles.map((file) =>
       path.join(workspaceRoot, file)
     );
 
+    this.logger.info(
+      `--- File Scan Finished: ${finalAbsoluteFiles.length} files selected ---`
+    );
     return finalAbsoluteFiles;
   }
 }

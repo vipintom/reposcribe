@@ -5,11 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2025-09-13
+
+### Fixed
+
+- **Configuration:** Fixed a critical bug where user-defined `exclude` patterns were being ignored. The root cause was a persistent bundler incompatibility with the external JSONC parsing library.
+
+### Changed
+
+- **Configuration File:** To permanently resolve the parsing issue, the configuration file format has been migrated from `.reposcribe.jsonc` to a more robust and standard **`.reposcribe.config.js`**. The `Create Configuration File` command now generates this new JavaScript-based format.
+
+### Deprecated
+
+- The `.reposcribe.json` and `.reposcribe.jsonc` file formats are now fully deprecated. The extension will display a warning and ignore these files, guiding users to create and use the new `.reposcribe.config.js` file.
+
 ## [0.4.2] - 2025-09-12
 
 ### Fixed
 
-- **FileScanner bug fix**
+- **Configuration:** Fixed a critical issue where user-defined `exclude` patterns were ignored due to a bundler incompatibility with the `jsonc-parser` library. The configuration system has been migrated from `.reposcribe.jsonc` to a more robust `.reposcribe.config.js` file to resolve this permanently.
 
 ## [0.4.1] - 2025-09-11
 

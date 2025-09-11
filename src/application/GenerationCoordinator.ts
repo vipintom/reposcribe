@@ -62,7 +62,7 @@ export class GenerationCoordinator {
       this.logger.info('Generation process started.');
 
       // 1. Resolve config via the service
-      const { resolvedConfig: finalConfig } =
+      const { resolvedConfig: finalConfig, userConfig } =
         await this.configService.getConfigContext();
 
       // 2. Read .gitignore
@@ -79,7 +79,8 @@ export class GenerationCoordinator {
       const absoluteFilePaths = await this.scanner.scan(
         this.workspaceRoot,
         finalConfig,
-        BASE_CONFIG, // Pass base config for include override logic
+        userConfig,
+        BASE_CONFIG,
         gitignoreContent
       );
       this.logger.info(
@@ -176,7 +177,7 @@ export class GenerationCoordinator {
       `Generating snapshot for selection of ${selectedPaths.length} items.`
     );
 
-    const { resolvedConfig: finalConfig } =
+    const { resolvedConfig: finalConfig, userConfig } =
       await this.configService.getConfigContext();
     const gitignorePath = path.join(this.workspaceRoot, '.gitignore');
     let gitignoreContent = '';
@@ -189,6 +190,7 @@ export class GenerationCoordinator {
     const allWorkspaceFiles = await this.scanner.scan(
       this.workspaceRoot,
       finalConfig,
+      userConfig,
       BASE_CONFIG,
       gitignoreContent
     );

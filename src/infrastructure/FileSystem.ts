@@ -104,30 +104,12 @@ export class FileSystem {
   }
 
   /**
-   * Finds the first file in the workspace matching a glob pattern.
-   * It prioritizes `.reposcribe.jsonc` over the legacy `.reposcribe.json`.
-   * @param globPattern The glob pattern to search for (e.g., '.reposcribe.json').
+   * Finds the configuration file in the workspace.
+   * @param fileName The name of the config file to find (e.g., '.reposcribe.config.js').
    * @returns A promise that resolves to the Uri of the found file, or undefined if not found.
    */
-  public async findFile(
-    globPattern: '.reposcribe.json' | '.reposcribe.jsonc'
-  ): Promise<vscode.Uri | undefined> {
-    if (globPattern === '.reposcribe.jsonc') {
-      const jsoncResults = await vscode.workspace.findFiles(
-        '.reposcribe.jsonc',
-        null,
-        1
-      );
-      if (jsoncResults.length > 0) {
-        return jsoncResults[0];
-      }
-    }
-
-    const jsonResults = await vscode.workspace.findFiles(
-      '.reposcribe.json',
-      null,
-      1
-    );
-    return jsonResults.length > 0 ? jsonResults[0] : undefined;
+  public async findConfig(fileName: string): Promise<vscode.Uri | undefined> {
+    const results = await vscode.workspace.findFiles(fileName, null, 1);
+    return results.length > 0 ? results[0] : undefined;
   }
 }

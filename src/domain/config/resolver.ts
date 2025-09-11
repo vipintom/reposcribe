@@ -14,24 +14,25 @@ export function resolveConfig(
   userConfig?: Partial<RepoScribeConfig>
 ): RepoScribeConfig {
   if (!userConfig) {
+    // Return a copy to prevent mutation of the base config
     return { ...baseConfig };
   }
 
-  // Combine exclude arrays. Base comes first, then user's patterns are added.
-  const combinedExcludes = [
-    ...baseConfig.exclude,
-    ...(userConfig.exclude || []),
-  ];
-
-  return {
-    ...baseConfig,
-    ...userConfig,
-    // Explicitly merge arrays and objects to avoid replacement by the spread operator
-    exclude: combinedExcludes,
-    include: userConfig.include ?? baseConfig.include, // user 'include' still replaces the base
+  // Explicitly build the final config to ensure correct merging,
+  // especially for arrays.
+  const resolved: RepoScribeConfig = {
+    outputFile: userConfig.outputFile ?? baseConfig.outputFile,
+    include: userConfig.include ?? baseConfig.include,
+    // Combine the base exclude list with the user's list.
+    exclude: [...baseConfig.exclude, ...(userConfig.exclude || [])],
     languageMap: {
       ...baseConfig.languageMap,
-      ...userConfig.languageMap,
+      ...(userConfig.languageMap || {}),
     },
+    regenerationDelay:
+      userConfig.regenerationDelay ?? baseConfig.regenerationDelay,
+    maxFileSizeKb: userConfig.maxFileSizeKb ?? baseConfig.maxFileSizeKb,
   };
+
+  return resolved;
 }

@@ -11,7 +11,7 @@ RepoScribe is a Visual Studio Code extension that automatically generates and ma
 - **Intelligent & Performant**: Uses a smart watcher that pre-filters events and an in-memory configuration cache to prevent unnecessary work and save system resources.
 - **Smart Debouncing**: Bundles rapid file changes into a single update to minimize performance impact.
 - **`.gitignore` Aware**: Natively respects your project's `.gitignore` rules.
-- **Highly Configurable**: Use an optional, self-documenting `.reposcribe.jsonc` file (with comments!) to precisely control which files are included or excluded.
+- **Highly Configurable**: Use an optional, self-documenting `.reposcribe.config.js` file to precisely control which files are included or excluded.
 - **File Size Limiting**: Set a `maxFileSizeKb` threshold to automatically omit overly large files.
 - **Reliable**: Uses atomic writes to prevent file corruption and safely skips inaccessible directories.
 - **Seamless Git Integration**: Automatically adds the output file to your `.gitignore`.
@@ -25,7 +25,7 @@ RepoScribe is a Visual Studio Code extension that automatically generates and ma
 
 ## Configuration
 
-For more granular control, create a `.reposcribe.jsonc` file in your project's root directory. You can generate this file quickly by running the **`RepoScribe: Create Configuration File`** command from the command palette. The generated file includes comments explaining each option.
+For more granular control, create a `.reposcribe.config.js` file in your project's root directory. You can generate this file quickly by running the **`RepoScribe: Create Configuration File`** command from the command palette. The generated file includes comments explaining each option.
 
 ### Available Options
 
@@ -40,27 +40,24 @@ For more granular control, create a `.reposcribe.jsonc` file in your project's r
 - `maxFileSizeKb` (number): The maximum size of a file in kilobytes to be included. Files larger than this will be omitted. Set to `0` for no limit.
   - **Default**: `2048`
 
-### Example `.reposcribe.jsonc`
+### Example `.reposcribe.config.js`
 
 This configuration tells RepoScribe to:
 
 1. Override the default exclusion for `pnpm-lock.yaml`, ensuring it's always included in the snapshot.
 2. Explicitly remove any test files and anything in the `src/legacy` directory as a final cleanup step.
 
-```jsonc
-// RepoScribe Configuration File (.jsonc format supports comments)
-{
-  // (Optional) The path to the output Markdown file.
-  "outputFile": "PROJECT_STRUCTURE.md",
-
+```javascript
+// RepoScribe Configuration File (.js format)
+module.exports = {
   // "include" acts as an "allow-list" to override default exclusions.
   // Here, we're forcing "pnpm-lock.yaml" (which is normally excluded) to be included.
-  "include": ["pnpm-lock.yaml"],
+  include: ['pnpm-lock.yaml'],
 
   // "exclude" is the final authority. It removes any matching files.
   // We're removing all test files and a legacy folder.
-  "exclude": ["**/*.test.ts", "src/legacy/**"]
-}
+  exclude: ['**/*.test.ts', 'src/legacy/**'],
+};
 ```
 
 ### Understanding the File Filtering Logic
@@ -83,7 +80,7 @@ All commands are available via the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift
 
 - **`RepoScribe: Force Rebuild`**: Immediately regenerates the project snapshot.
 - **`RepoScribe: Pause/Resume Automatic Generation`**: Toggles the file watcher on or off. The state is saved per-project.
-- **`RepoScribe: Create Configuration File`**: Creates a `.reposcribe.jsonc` file in your project root with default settings and explanatory comments.
+- **`RepoScribe: Create Configuration File`**: Creates a `.reposcribe.config.js` file in your project root with default settings and explanatory comments.
 - **`RepoScribe: Open Output File`**: Opens the generated Markdown file.
 - **`RepoScribe: Copy Output File Content`**: Copies the entire content of the output file to your clipboard.
 - **`RepoScribe: Generate Snapshot for Selection`**: Generates a snapshot for the selected file(s) and/or folder(s) in the Explorer and copies it to the clipboard.

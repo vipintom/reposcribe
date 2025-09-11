@@ -4,9 +4,6 @@ import { Logger } from '../infrastructure/Logger';
 import { resolveConfig } from '../domain/config/resolver';
 import { RepoScribeConfig, BASE_CONFIG } from '../domain/config/types';
 
-// Type alias for the dynamically imported module
-type JsoncParseType = typeof import('jsonc-parser').parse;
-
 export interface ConfigContext {
   resolvedConfig: RepoScribeConfig;
   userConfig: Partial<RepoScribeConfig>;
@@ -19,19 +16,11 @@ export interface ConfigContext {
  */
 export class ConfigurationService {
   private cachedContext: ConfigContext | null = null;
-  private jsoncParse: JsoncParseType | null = null;
 
   constructor(
     private readonly fs: FileSystem,
     private readonly logger: Logger
   ) {}
-
-  private async getJsoncParse(): Promise<JsoncParseType> {
-    if (!this.jsoncParse) {
-      this.jsoncParse = (await import('jsonc-parser')).parse;
-    }
-    return this.jsoncParse;
-  }
 
   /**
    * Retrieves the configuration context, containing both the resolved final
@@ -47,25 +36,31 @@ export class ConfigurationService {
 
     this.logger.info('No cached configuration found. Resolving from file.');
 
-    const configUri = await this.fs.findFile('.reposcribe.jsonc');
+    const configUri = await this.fs.findConfig('.reposcribe.config.js');
     let userConfig: Partial<RepoScribeConfig> = {};
 
     if (configUri) {
       this.logger.info(`Found config file at: ${configUri.fsPath}`);
       try {
-        const jsoncParse = await this.getJsoncParse();
-        const configContent = await this.fs.readFile(configUri.fsPath);
-        userConfig = jsoncParse(configContent) as Partial<RepoScribeConfig>;
+        // Bust the require cache to pick up changes
+        delete require.cache[require.resolve(configUri.fsPath)];
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        userConfig = require(configUri.fsPath);
+        this.logger.info(
+          `Loaded user config: ${JSON.stringify(userConfig, null, 2)}`
+        );
       } catch (error) {
         this.logger.error(
-          `Failed to read or parse .reposcribe.jsonc: ${
+          `Failed to load or parse .reposcribe.config.js: ${
             (error as Error).message
           }`
         );
         // Continue with base config on error
       }
     } else {
-      this.logger.info('No .reposcribe.jsonc found, using default settings.');
+      this.logger.info(
+        'No .reposcribe.config.js found, using default settings.'
+      );
     }
 
     const resolvedConfig = resolveConfig(BASE_CONFIG, userConfig);

@@ -2,7 +2,7 @@
   "name": "reposcribe",
   "displayName": "RepoScribe",
   "description": "Automatically generates and maintains a single Markdown file snapshot of your project's source code, perfect for LLM context, documentation, or code reviews.",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "publisher": "vipin-tom-varghese",
   "license": "MIT",
   "repository": {
@@ -61,9 +61,8 @@
   },
   "scripts": {
     "vscode:prepublish": "pnpm esbuild",
-    "esbuild": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify",
-    "esbuild:dev": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
-    "watch:esbuild": "pnpm esbuild:dev --watch",
+    "esbuild": "node esbuild.js --production",
+    "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "pnpm tsc --watch",
     "lint": "eslint .",
     "package": "vsce package --no-dependencies"
@@ -91,7 +90,6 @@
     "debounce-fn": "^6.0.0",
     "fast-glob": "^3.3.3",
     "fs-extra": "^11.3.1",
-    "ignore": "^7.0.5",
-    "jsonc-parser": "^3.3.1"
+    "ignore": "^7.0.5"
   }
 }

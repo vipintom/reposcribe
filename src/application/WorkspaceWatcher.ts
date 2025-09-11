@@ -104,7 +104,7 @@ export class WorkspaceWatcher implements vscode.Disposable {
     );
 
     const configWatcher = vscode.workspace.createFileSystemWatcher(
-      '**/{.reposcribe.jsonc,.gitignore}'
+      '**/{.reposcribe.config.js,.gitignore}'
     );
 
     const onConfigChange = (uri: vscode.Uri) => {

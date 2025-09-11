@@ -9,9 +9,6 @@ import { VSCodeUI, UIState } from '../infrastructure/VSCodeUI';
 import { BASE_CONFIG } from '../domain/config/types';
 import { ConfigurationService } from './ConfigurationService';
 
-// Type alias for the dynamically imported module
-type JsoncParseType = typeof import('jsonc-parser').parse;
-
 const PAUSE_STATE_KEY = 'reposcribe.isPaused';
 
 /**
@@ -19,14 +16,6 @@ const PAUSE_STATE_KEY = 'reposcribe.isPaused';
  */
 export class CommandRegistry {
   private static isAutoGenerationPaused = false;
-  private static jsoncParse: JsoncParseType | null = null;
-
-  private static async getJsoncParse(): Promise<JsoncParseType> {
-    if (!this.jsoncParse) {
-      this.jsoncParse = (await import('jsonc-parser')).parse;
-    }
-    return this.jsoncParse;
-  }
 
   /**
    * Sets the initial paused state of the command registry.
@@ -192,47 +181,35 @@ export class CommandRegistry {
   }
 
   private static generateConfigTemplate(): string {
-    const defaultExcludesList = BASE_CONFIG.exclude
-      .map((item) => `// - "${item}"`)
-      .join('\n');
-
-    const topComment = `// RepoScribe Configuration File (.jsonc format supports comments)
+    return `// RepoScribe Configuration File (.js format)
 //
 // This file allows you to customize RepoScribe's behavior. For a full explanation
 // of the filtering logic, please see the extension's documentation.
-//
-// Default Exclusions Reference:
-// RepoScribe automatically ignores the following patterns. You can force a file
-// to be included, even if it matches a pattern below, by adding it to the
-// "include" array.
-${defaultExcludesList}
-`;
 
-    return `${topComment}
-{
+module.exports = {
   // (Optional) The path to the output Markdown file.
-  "outputFile": "${BASE_CONFIG.outputFile}",
+  // outputFile: "${BASE_CONFIG.outputFile}",
 
   // (Optional) An array of glob patterns that act as an "allow-list".
-  // If a file is excluded by the default rules (listed above) or .gitignore,
+  // If a file is excluded by the default rules (listed below) or .gitignore,
   // but it matches a pattern here, it will be ADDED BACK to the snapshot.
   // This is a powerful way to override default exclusions.
   // Example: ["pnpm-lock.yaml", "dist/important-file.js"]
-  "include": [],
+  // include: [],
 
   // (Optional) An array of glob patterns to exclude. These are applied as the
   // final filter. Any file matching a pattern here will be REMOVED, even if
   // it was included by the "include" patterns. This is the final authority.
   // Example: ["**/*.test.ts"]
-  "exclude": [],
+  // exclude: [],
 
   // (Optional) The delay in milliseconds after a file change before regenerating.
-  "regenerationDelay": ${BASE_CONFIG.regenerationDelay},
+  // regenerationDelay: ${BASE_CONFIG.regenerationDelay},
 
   // (Optional) The maximum size of a file in kilobytes to be included.
   // Set to 0 for no limit.
-  "maxFileSizeKb": ${BASE_CONFIG.maxFileSizeKb}
-}
+  // maxFileSizeKb: ${BASE_CONFIG.maxFileSizeKb}
+};
 `;
   }
 
@@ -241,38 +218,25 @@ ${defaultExcludesList}
     wsRoot: string,
     logger: Logger
   ): Promise<void> {
-    const configPath = path.join(wsRoot, '.reposcribe.jsonc');
+    const configPath = path.join(wsRoot, '.reposcribe.config.js');
     const configUri = vscode.Uri.file(configPath);
 
     try {
       await vscode.workspace.fs.stat(configUri);
-      vscode.window.showInformationMessage('.reposcribe.jsonc already exists.');
+      vscode.window.showInformationMessage(
+        '.reposcribe.config.js already exists.'
+      );
     } catch {
       const configContent = this.generateConfigTemplate();
       await vscode.workspace.fs.writeFile(
         configUri,
         Buffer.from(configContent, 'utf8')
       );
-      await fs.updateGitignore(wsRoot, '.reposcribe.jsonc');
-      logger.info('Created .reposcribe.jsonc configuration file.');
+      await fs.updateGitignore(wsRoot, '.reposcribe.config.js');
+      logger.info('Created .reposcribe.config.js configuration file.');
       vscode.window.showInformationMessage(
-        'Created .reposcribe.jsonc with default values and comments.'
+        'Created .reposcribe.config.js with default values and comments.'
       );
     }
-  }
-
-  private static async getLatestOutputFile(fs: FileSystem): Promise<string> {
-    const configUri = await fs.findFile('.reposcribe.jsonc');
-    if (configUri) {
-      try {
-        const jsoncParse = await this.getJsoncParse();
-        const content = await fs.readFile(configUri.fsPath);
-        const config = jsoncParse(content);
-        return config.outputFile || BASE_CONFIG.outputFile;
-      } catch {
-        // Fall-through to default
-      }
-    }
-    return BASE_CONFIG.outputFile;
   }
 }
