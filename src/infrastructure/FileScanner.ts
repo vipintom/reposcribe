@@ -42,8 +42,8 @@ export class FileScanner {
    */
   public async scan(
     workspaceRoot: string,
-    baseConfig: RepoScribeConfig,
-    userConfig: Partial<RepoScribeConfig>,
+    config: RepoScribeConfig,
+    baseConfig: RepoScribeConfig, // Still needed to differentiate base/user excludes for include logic
     gitignoreContent: string
   ): Promise<string[]> {
     const fg = await this.getFg();
@@ -66,13 +66,13 @@ export class FileScanner {
     const gitignoreFilter = ignore().add(gitignoreContent);
     const filesAfterGitignore = gitignoreFilter.filter(allRelativeFiles);
 
-    // Stage 3: Apply default `exclude` rules
+    // Stage 3: Apply default `exclude` rules ONLY
     const baseExcludeFilter = ignore().add(baseConfig.exclude);
     const filesAfterBaseExclude = baseExcludeFilter.filter(filesAfterGitignore);
 
     // Stage 4: Add back files based on user's `include` patterns
     let filesAfterInclude = filesAfterBaseExclude;
-    if (userConfig.include && userConfig.include.length > 0) {
+    if (config.include && config.include.length > 0) {
       // Find which files were excluded by the base config
       const filesAfterBaseExcludeSet = new Set(filesAfterBaseExclude);
       const filesExcludedByBase = filesAfterGitignore.filter(
@@ -80,10 +80,7 @@ export class FileScanner {
       );
 
       // Create a filter that keeps only files matching the `include` patterns
-      const includePatterns = [
-        '**/*',
-        ...userConfig.include.map((p) => `!${p}`),
-      ];
+      const includePatterns = ['**/*', ...config.include.map((p) => `!${p}`)];
       const includeFilter = ignore().add(includePatterns);
       const filesToUnexclude = includeFilter.filter(filesExcludedByBase);
 
@@ -91,12 +88,9 @@ export class FileScanner {
       filesAfterInclude = [...filesAfterBaseExclude, ...filesToUnexclude];
     }
 
-    // Stage 5: Apply user `exclude` rules as the final filter
-    let finalRelativeFiles = filesAfterInclude;
-    if (userConfig.exclude && userConfig.exclude.length > 0) {
-      const userExcludeFilter = ignore().add(userConfig.exclude);
-      finalRelativeFiles = userExcludeFilter.filter(filesAfterInclude);
-    }
+    // Stage 5: Apply the FULL `exclude` list (base + user) as the final filter
+    const finalExcludeFilter = ignore().add(config.exclude);
+    const finalRelativeFiles = finalExcludeFilter.filter(filesAfterInclude);
 
     const finalAbsoluteFiles = finalRelativeFiles.map((file) =>
       path.join(workspaceRoot, file)

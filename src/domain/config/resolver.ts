@@ -14,15 +14,21 @@ export function resolveConfig(
   userConfig?: Partial<RepoScribeConfig>
 ): RepoScribeConfig {
   if (!userConfig) {
-    return baseConfig;
+    return { ...baseConfig };
   }
 
-  // Merge user config over base config.
-  // For arrays (include, exclude) and primitives (outputFile), user values will replace base values.
-  // For languageMap, we'll merge the objects, with user mappings taking precedence.
+  // Combine exclude arrays. Base comes first, then user's patterns are added.
+  const combinedExcludes = [
+    ...baseConfig.exclude,
+    ...(userConfig.exclude || []),
+  ];
+
   return {
     ...baseConfig,
     ...userConfig,
+    // Explicitly merge arrays and objects to avoid replacement by the spread operator
+    exclude: combinedExcludes,
+    include: userConfig.include ?? baseConfig.include, // user 'include' still replaces the base
     languageMap: {
       ...baseConfig.languageMap,
       ...userConfig.languageMap,
